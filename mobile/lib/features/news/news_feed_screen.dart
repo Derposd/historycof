@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/colors.dart';
+import '../../core/theme/theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/logo.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/net_image.dart';
-import '../../core/widgets/wordmark.dart';
+import '../contacts/contacts_providers.dart';
+import '../contacts/venue.dart';
 import 'news.dart';
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
@@ -38,7 +42,6 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final feed = ref.watch(newsFeedProvider);
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 110;
 
     return RefreshIndicator(
       color: HcColors.accent,
@@ -50,74 +53,77 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
           SliverToBoxAdapter(child: SafeArea(bottom: false, child: _Header())),
           ...switch (feed) {
             AsyncData(:final value) when value.items.isEmpty => [
-                const SliverToBoxAdapter(
-                  child: EmptyState(
-                    icon: Icons.local_cafe_outlined,
-                    title: 'Пока тихо',
-                    subtitle: 'Скоро здесь появятся новости кофейни — новые десерты, события и истории',
-                  ),
+              const SliverToBoxAdapter(
+                child: EmptyState(
+                  icon: Icons.local_cafe_outlined,
+                  title: 'Пока тихо',
+                  subtitle: 'Скоро здесь появятся новости кофейни — новые десерты, события и истории',
                 ),
-              ],
+              ),
+            ],
             AsyncData(:final value) => [
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverList.separated(
-                    itemCount: value.items.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 18),
-                    itemBuilder: (context, i) => NewsCard(
-                      post: value.items[i],
-                      onTap: () => context.push('/news/${value.items[i].id}'),
-                    ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+                sliver: SliverList.separated(
+                  itemCount: value.items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: HcSpace.l),
+                  itemBuilder: (context, i) => FadeSlideIn(
+                    index: i,
+                    child: NewsCard(post: value.items[i], onTap: () => context.push('/news/${value.items[i].id}')),
                   ),
                 ),
-                if (value.loadingMore)
-                  const SliverToBoxAdapter(
-                    child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(strokeWidth: 1.6))),
+              ),
+              if (value.loadingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 1.6)),
                   ),
-              ],
+                ),
+            ],
             AsyncError(:final error) when !feed.hasValue => [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: ErrorState(error: error, onRetry: () => ref.invalidate(newsFeedProvider)),
-                ),
-              ],
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ErrorState(error: error, onRetry: () => ref.invalidate(newsFeedProvider)),
+              ),
+            ],
             _ => [
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  sliver: SliverList.separated(
-                    itemCount: 3,
-                    separatorBuilder: (_, _) => const SizedBox(height: 18),
-                    itemBuilder: (_, _) => const _NewsCardSkeleton(),
-                  ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+                sliver: SliverList.separated(
+                  itemCount: 3,
+                  separatorBuilder: (_, _) => const SizedBox(height: HcSpace.l),
+                  itemBuilder: (_, _) => const _NewsCardSkeleton(),
                 ),
-              ],
+              ),
+            ],
           },
-          SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+          SliverToBoxAdapter(child: SizedBox(height: HcSpace.navInset(context))),
         ],
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagline = (ref.watch(venueProvider).value ?? Venue.fallback).tagline;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
-      child: Column(
-        children: [
-          const HistoryWordmark(size: 34),
-          const SizedBox(height: 10),
-          Text('Место для ваших историй', style: HcType.serif(size: 19, weight: 400, italic: true, color: HcColors.textSecondary)),
-          const SizedBox(height: 22),
-          const Row(
-            children: [
-              Expanded(child: Divider()),
-              Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: CapsLabel('Новости')),
-              Expanded(child: Divider()),
+      padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.l, HcSpace.gutter, HcSpace.xl),
+      child: FadeSlideIn(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const HcLogo(size: 44),
+            if (tagline.isNotEmpty) ...[
+              const SizedBox(height: HcSpace.xl),
+              Text(tagline, style: HcType.serif(size: 30, weight: 500, height: 1.1)),
             ],
-          ),
-        ],
+            const SizedBox(height: HcSpace.xs),
+            Text('Новости и события кофейни', style: HcType.sans(color: HcColors.textSecondary)),
+          ],
+        ),
       ),
     );
   }
@@ -137,24 +143,27 @@ class NewsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (post.imageUrl != null)
-            AspectRatio(aspectRatio: 16 / 10, child: Hero(tag: 'news-${post.id}', child: NetImage(post.imageUrl))),
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Hero(tag: 'news-${post.id}', child: NetImage(post.imageUrl)),
+            ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.all(HcSpace.card),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    CapsLabel(formatNewsDate(post.publishedAt)),
+                    SectionLabel(formatNewsDate(post.publishedAt)),
                     if (post.pinned) ...[
-                      const SizedBox(width: 10),
+                      const SizedBox(width: HcSpace.s),
                       const Icon(Icons.push_pin_outlined, size: 14, color: HcColors.accent),
                     ],
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: HcSpace.s),
                 Text(post.title, style: HcType.serif(size: 24, weight: 600)),
-                const SizedBox(height: 8),
+                const SizedBox(height: HcSpace.s),
                 Text(
                   post.body,
                   maxLines: 3,
@@ -176,7 +185,7 @@ class _NewsCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Glass(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(HcSpace.card),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

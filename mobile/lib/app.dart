@@ -30,18 +30,20 @@ class _HistoryCoffeeAppState extends ConsumerState<HistoryCoffeeApp> {
     final push = ref.read(pushServiceProvider);
     _subs
       ..add(push.openedMessages.listen(_openFromPush))
-      ..add(push.foregroundMessages.listen((m) {
-        final title = m.notification?.title;
-        if (title == null) return;
-        if (m.data['type'] == 'news') ref.invalidate(newsFeedProvider);
-        if (m.data['type'] == 'feedback') ref.invalidate(myFeedbackProvider);
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text(title),
-            action: SnackBarAction(label: 'Открыть', onPressed: () => _openFromPush(m.data)),
-          ),
-        );
-      }));
+      ..add(
+        push.foregroundMessages.listen((m) {
+          final title = m.notification?.title;
+          if (title == null) return;
+          if (m.data['type'] == 'news') ref.invalidate(newsFeedProvider);
+          if (m.data['type'] == 'feedback') ref.invalidate(myFeedbackProvider);
+          scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text(title),
+              action: SnackBarAction(label: 'Открыть', onPressed: () => _openFromPush(m.data)),
+            ),
+          );
+        }),
+      );
   }
 
   void _openFromPush(Map<String, dynamic> data) {
@@ -103,10 +105,7 @@ class _HistoryCoffeeAppState extends ConsumerState<HistoryCoffeeApp> {
           'Пожалуйста, ознакомьтесь с обновлённой политикой обработки персональных данных и подтвердите согласие.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => ref.read(routerProvider).push('/privacy'),
-            child: const Text('Прочитать'),
-          ),
+          TextButton(onPressed: () => ref.read(routerProvider).push('/privacy'), child: const Text('Прочитать')),
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Выйти')),
           TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Согласен')),
         ],

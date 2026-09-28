@@ -6,6 +6,7 @@ import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/net_image.dart';
 import 'menu_badge_chip.dart';
 import 'menu_models.dart';
@@ -15,7 +16,12 @@ Future<void> showMenuItemSheet(BuildContext context, MenuItem item) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    barrierColor: HcColors.text.withValues(alpha: 0.25),
+    barrierColor: HcColors.text.withValues(alpha: 0.28),
+    sheetAnimationStyle: AnimationStyle(
+      duration: Motion.of(context, Motion.slow),
+      reverseDuration: Motion.of(context, Motion.medium),
+      curve: Motion.emphasized,
+    ),
     builder: (_) => MenuItemSheet(item: item),
   );
 }
@@ -29,64 +35,82 @@ class MenuItemSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: item.imageUrl != null ? 0.82 : 0.55,
-      minChildSize: 0.4,
+      initialChildSize: 0.86,
+      minChildSize: 0.5,
       maxChildSize: 0.95,
+      snap: true,
       builder: (context, scroll) => Glass(
         radius: 28,
         fill: HcColors.glassFillStrong,
         blur: 24,
         child: ListView(
           controller: scroll,
-          padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24),
+          padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + HcSpace.xl),
           children: [
             Center(
               child: Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 10),
+                margin: const EdgeInsets.symmetric(vertical: HcSpace.m),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(color: HcColors.hairline, borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            if (item.imageUrl != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: Hero(
+                tag: 'menu-photo-${item.id}',
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(HcRadii.card),
-                  child: AspectRatio(aspectRatio: 1, child: NetImage(item.imageUrl)),
+                  child: AspectRatio(aspectRatio: 4 / 3, child: NetImage(item.imageUrl)),
                 ),
               ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (item.badges.isNotEmpty) ...[
-                    Wrap(spacing: 8, runSpacing: 8, children: [for (final b in item.badges) MenuBadgeChip(b)]),
-                    const SizedBox(height: 14),
+              padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.xl, HcSpace.gutter, 0),
+              child: FadeSlideIn(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item.badges.isNotEmpty) ...[
+                      Wrap(
+                        spacing: HcSpace.s,
+                        runSpacing: HcSpace.s,
+                        children: [for (final b in item.badges) MenuBadgeChip(b)],
+                      ),
+                      const SizedBox(height: HcSpace.l),
+                    ],
+                    Text(item.title, style: HcType.serif(size: 32, weight: 600)),
+                    if (item.portion != null) ...[
+                      const SizedBox(height: HcSpace.xs),
+                      Text(item.portion!, style: HcType.sans(color: HcColors.textSecondary)),
+                    ],
+                    if (item.description != null && item.description!.isNotEmpty) ...[
+                      const SizedBox(height: HcSpace.l),
+                      const SectionLabel('Состав'),
+                      const SizedBox(height: HcSpace.xs),
+                      Text(item.description!, style: HcType.sans(size: 15.5, height: 1.55)),
+                    ],
+                    if (item.prices.isNotEmpty) ...[
+                      const SizedBox(height: HcSpace.xl),
+                      const Hairline(),
+                      const SizedBox(height: HcSpace.l),
+                      _Prices(prices: item.prices),
+                    ],
+                    if (item.story != null && item.story!.isNotEmpty) ...[
+                      const SizedBox(height: HcSpace.xl),
+                      AccentNote(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SectionLabel('Блюдо с историей', color: HcColors.accentDark),
+                            const SizedBox(height: HcSpace.xs),
+                            Text(item.story!, style: HcType.serif(size: 19, weight: 400, italic: true, height: 1.35)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                  Text(item.title, style: HcType.serif(size: 32, weight: 500)),
-                  if (item.portion != null) ...[
-                    const SizedBox(height: 4),
-                    Text(item.portion!, style: HcType.sans(color: HcColors.textSecondary)),
-                  ],
-                  if (item.description != null && item.description!.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    const CapsLabel('Состав'),
-                    const SizedBox(height: 6),
-                    Text(item.description!, style: HcType.sans(size: 15.5, height: 1.55)),
-                  ],
-                  if (item.prices.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    const Hairline(),
-                    const SizedBox(height: 14),
-                    _Prices(prices: item.prices),
-                  ],
-                  if (item.story != null && item.story!.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    _Story(text: item.story!),
-                  ],
-                ],
+                ),
               ),
             ),
           ],
@@ -106,44 +130,22 @@ class _Prices extends StatelessWidget {
     return Row(
       children: [
         for (final (i, p) in prices.indexed) ...[
-          if (i > 0) Container(width: 0.6, height: 36, color: HcColors.hairline, margin: const EdgeInsets.symmetric(horizontal: 18)),
+          if (i > 0)
+            Container(
+              width: 0.6,
+              height: 40,
+              color: HcColors.hairline,
+              margin: const EdgeInsets.symmetric(horizontal: HcSpace.l),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (p.label.isNotEmpty) CapsLabel(p.label),
-              if (p.label.isNotEmpty) const SizedBox(height: 4),
+              if (p.label.isNotEmpty) ...[SectionLabel(p.label), const SizedBox(height: 2)],
               Text(formatRub(p.amount), style: HcType.serif(size: 26, weight: 600)),
             ],
           ),
         ],
       ],
-    );
-  }
-}
-
-/// «Блюдо с историей» — лёгкая легенда с крупной декоративной кавычкой.
-class _Story extends StatelessWidget {
-  const _Story({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-      decoration: BoxDecoration(
-        color: HcColors.backgroundAlt.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(HcRadii.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const QuoteMark(size: 56),
-          const CapsLabel('Блюдо с историей'),
-          const SizedBox(height: 8),
-          Text(text, style: HcType.serif(size: 19, weight: 400, italic: true, height: 1.35)),
-        ],
-      ),
     );
   }
 }

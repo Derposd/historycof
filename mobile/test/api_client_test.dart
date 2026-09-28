@@ -25,12 +25,12 @@ class FakeAdapter implements HttpClientAdapter {
 }
 
 ResponseBody json(int status, Object body) => ResponseBody.fromString(
-      jsonEncode(body),
-      status,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
+  jsonEncode(body),
+  status,
+  headers: {
+    Headers.contentTypeHeader: [Headers.jsonContentType],
+  },
+);
 
 void main() {
   test('401 → refresh → повтор запроса с новым токеном', () async {

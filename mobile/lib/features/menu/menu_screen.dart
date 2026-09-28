@@ -6,6 +6,7 @@ import '../../core/theme/theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/net_image.dart';
 import 'menu_badge_chip.dart';
 import 'menu_item_sheet.dart';
@@ -20,9 +21,20 @@ class MenuScreen extends ConsumerStatefulWidget {
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
   String _sectionSlug = 'kitchen';
+  int _direction = 1;
   final _scroll = ScrollController();
   final Map<String, GlobalKey> _categoryKeys = {};
   String? _activeCategoryId;
+  List<MenuCategory> _visibleCategories = const [];
+  bool _jumping = false;
+
+  static const _chipsHeight = 60.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_syncActiveCategory);
+  }
 
   @override
   void dispose() {
@@ -32,11 +44,45 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
   GlobalKey _keyFor(String id) => _categoryKeys.putIfAbsent(id, GlobalKey.new);
 
-  void _jumpTo(MenuCategory c) {
+  /// Подсвечиваем чип категории, которая сейчас под закреплённой строкой чипов.
+  void _syncActiveCategory() {
+    if (_jumping || _visibleCategories.isEmpty) return;
+    final threshold = MediaQuery.paddingOf(context).top + _chipsHeight + 40;
+    String? active = _visibleCategories.first.id;
+    for (final c in _visibleCategories) {
+      final box = _categoryKeys[c.id]?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) continue;
+      if (box.localToGlobal(Offset.zero).dy <= threshold) active = c.id;
+    }
+    if (active != _activeCategoryId) setState(() => _activeCategoryId = active);
+  }
+
+  Future<void> _jumpTo(MenuCategory c) async {
     setState(() => _activeCategoryId = c.id);
     final ctx = _categoryKeys[c.id]?.currentContext;
-    if (ctx != null) {
-      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic, alignment: 0.02);
+    if (ctx == null) return;
+    _jumping = true;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: Motion.of(context, Motion.slow),
+      curve: Motion.emphasized,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+      alignment: 0,
+    );
+    _jumping = false;
+  }
+
+  void _selectSection(MenuData data, String slug) {
+    if (slug == _sectionSlug) return;
+    final from = data.sections.indexWhere((s) => s.slug == _sectionSlug);
+    final to = data.sections.indexWhere((s) => s.slug == slug);
+    setState(() {
+      _direction = to >= from ? 1 : -1;
+      _sectionSlug = slug;
+      _activeCategoryId = null;
+    });
+    if (_scroll.hasClients && _scroll.offset > 0) {
+      _scroll.animateTo(0, duration: Motion.of(context, Motion.medium), curve: Motion.curve);
     }
   }
 
@@ -45,11 +91,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final menu = ref.watch(menuProvider);
     return SafeArea(
       bottom: false,
-      child: switch (menu) {
-        AsyncData(:final value) => _buildMenu(value),
-        AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(menuProvider)),
-        _ => const Center(child: CircularProgressIndicator(strokeWidth: 1.6)),
-      },
+      child: AnimatedSwitcher(
+        duration: Motion.of(context, Motion.medium),
+        child: switch (menu) {
+          AsyncData(:final value) => _buildMenu(value),
+          AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(menuProvider)),
+          _ => const _MenuSkeleton(),
+        },
+      ),
     );
   }
 
@@ -58,7 +107,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       return const EmptyState(icon: Icons.restaurant_menu_rounded, title: 'Меню скоро появится');
     }
     final section = data.sections.firstWhere((s) => s.slug == _sectionSlug, orElse: () => data.sections.first);
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 110;
+    _visibleCategories = section.categories;
+    final d = Motion.of(context, Motion.medium);
 
     return RefreshIndicator(
       color: HcColors.accent,
@@ -67,60 +117,45 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         slivers: [
-          const SliverToBoxAdapter(child: ScreenTitle('Меню', overline: 'History Coffee')),
+          const SliverToBoxAdapter(child: ScreenTitle('Меню')),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: _SectionSwitch(
-                sections: data.sections,
-                selected: section.slug,
-                onChanged: (slug) => setState(() {
-                  _sectionSlug = slug;
-                  _activeCategoryId = null;
-                  if (_scroll.hasClients) _scroll.jumpTo(0);
-                }),
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: SegmentedSwitch(
+                labels: [for (final s in data.sections) s.title],
+                index: data.sections.indexOf(section),
+                onChanged: (i) => _selectSection(data, data.sections[i].slug),
               ),
             ),
           ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _ChipsHeader(
+              height: _chipsHeight,
+              sectionKey: section.slug,
               categories: section.categories,
-              activeId: _activeCategoryId,
+              activeId: _activeCategoryId ?? section.categories.firstOrNull?.id,
               onTap: _jumpTo,
             ),
           ),
-          if (section.categories.isEmpty)
-            const SliverToBoxAdapter(
-              child: EmptyState(
-                icon: Icons.restaurant_menu_rounded,
-                title: 'Раздел наполняется',
-                subtitle: 'Загляните в кофейню — бариста расскажет, что сегодня в меню',
+          SliverToBoxAdapter(
+            child: AnimatedSwitcher(
+              duration: d,
+              switchInCurve: Motion.curve,
+              switchOutCurve: Curves.easeIn,
+              layoutBuilder: (current, previous) =>
+                  Stack(alignment: Alignment.topCenter, children: [...previous, ?current]),
+              transitionBuilder: (child, a) => fadeThroughTransition(
+                child,
+                a,
+                direction: child.key == ValueKey(section.slug) ? _direction : -_direction,
               ),
+              child: _SectionBody(key: ValueKey(section.slug), section: section, keyFor: _keyFor),
             ),
-          for (final category in section.categories) ...[
-            SliverToBoxAdapter(
-              key: _keyFor(category.id),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
-                child: Text(category.title, style: HcType.serif(size: 26, weight: 500)),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              sliver: SliverList.separated(
-                itemCount: category.items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, i) => MenuItemCard(
-                  item: category.items[i],
-                  onTap: () => showMenuItemSheet(context, category.items[i]),
-                ),
-              ),
-            ),
-          ],
+          ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+              padding: const EdgeInsets.fromLTRB(HcSpace.xxl, HcSpace.xxl, HcSpace.xxl, 0),
               child: Text(
                 data.disclaimer,
                 textAlign: TextAlign.center,
@@ -128,50 +163,251 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               ),
             ),
           ),
-          SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+          SliverToBoxAdapter(child: SizedBox(height: HcSpace.navInset(context))),
         ],
       ),
     );
   }
 }
 
-/// Переключатель «Кухня / Бар» — стеклянная «пилюля».
-class _SectionSwitch extends StatelessWidget {
-  const _SectionSwitch({required this.sections, required this.selected, required this.onChanged});
+class _SectionBody extends StatelessWidget {
+  const _SectionBody({super.key, required this.section, required this.keyFor});
 
-  final List<MenuSection> sections;
-  final String selected;
-  final ValueChanged<String> onChanged;
+  final MenuSection section;
+  final GlobalKey Function(String id) keyFor;
 
   @override
   Widget build(BuildContext context) {
+    if (section.categories.isEmpty) {
+      return const EmptyState(
+        icon: Icons.restaurant_menu_rounded,
+        title: 'Раздел наполняется',
+        subtitle: 'Загляните в кофейню — бариста расскажет, что сегодня в меню',
+      );
+    }
+    var n = 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final category in section.categories) ...[
+          Padding(
+            key: keyFor(category.id),
+            padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.xl, HcSpace.gutter, HcSpace.m),
+            child: Text(category.title, style: HcType.serif(size: 26, weight: 600)),
+          ),
+          for (final item in category.items)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(HcSpace.gutter, 0, HcSpace.gutter, HcSpace.listGap),
+              child: FadeSlideIn(
+                index: n++,
+                child: MenuItemCard(item: item, onTap: () => showMenuItemSheet(context, item)),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Переключатель на несколько вариантов с одним скользящим «ползунком»:
+/// подсветка переезжает под выбранный вариант, цвет текста меняется синхронно.
+class SegmentedSwitch extends StatelessWidget {
+  const SegmentedSwitch({super.key, required this.labels, required this.index, required this.onChanged});
+
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = Motion.of(context, Motion.medium);
     return Glass(
       radius: HcRadii.pill,
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(HcSpace.xs),
       shadow: false,
-      child: Row(
-        children: [
-          for (final s in sections)
-            Expanded(
-              child: Semantics(
-                selected: s.slug == selected,
-                button: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onChanged(s.slug),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 11),
+      child: SizedBox(
+        height: 44,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final w = c.maxWidth / labels.length;
+            return Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: d,
+                  curve: Motion.emphasized,
+                  left: w * index,
+                  width: w,
+                  top: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: s.slug == selected ? HcColors.accent : Colors.transparent,
+                      color: HcColors.accent,
                       borderRadius: BorderRadius.circular(HcRadii.pill),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      s.title.toUpperCase(),
-                      style: HcType.caps(size: 12.5, color: s.slug == selected ? Colors.white : HcColors.text, weight: 600),
+                  ),
+                ),
+                Row(
+                  children: [
+                    for (final (i, label) in labels.indexed)
+                      Expanded(
+                        child: Semantics(
+                          button: true,
+                          selected: i == index,
+                          child: Pressable(
+                            haptic: true,
+                            scale: 0.96,
+                            onTap: () => onChanged(i),
+                            child: Container(
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(horizontal: HcSpace.s),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: AnimatedDefaultTextStyle(
+                                  duration: d,
+                                  curve: Motion.curve,
+                                  style: HcType.sans(
+                                    size: 15,
+                                    weight: 600,
+                                    color: i == index ? Colors.white : HcColors.text,
+                                    height: 1.2,
+                                  ),
+                                  child: Text(label, maxLines: 1),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ChipsHeader extends SliverPersistentHeaderDelegate {
+  _ChipsHeader({
+    required this.height,
+    required this.sectionKey,
+    required this.categories,
+    required this.activeId,
+    required this.onTap,
+  });
+
+  final double height;
+  final String sectionKey;
+  final List<MenuCategory> categories;
+  final String? activeId;
+  final ValueChanged<MenuCategory> onTap;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final stuck = overlapsContent || shrinkOffset > 0;
+    return AnimatedContainer(
+      height: height,
+      duration: Motion.of(context, Motion.fast),
+      decoration: BoxDecoration(
+        color: HcColors.background.withValues(alpha: stuck ? 0.94 : 0),
+        border: Border(bottom: BorderSide(color: stuck ? HcColors.hairline : Colors.transparent, width: 0.6)),
+      ),
+      child: AnimatedSwitcher(
+        duration: Motion.of(context, Motion.medium),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.centerLeft,
+          children: [...previous, ?current],
+        ),
+        child: _Chips(key: ValueKey(sectionKey), categories: categories, activeId: activeId, onTap: onTap),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_ChipsHeader old) =>
+      old.categories != categories || old.activeId != activeId || old.sectionKey != sectionKey;
+}
+
+class _Chips extends StatefulWidget {
+  const _Chips({super.key, required this.categories, required this.activeId, required this.onTap});
+
+  final List<MenuCategory> categories;
+  final String? activeId;
+  final ValueChanged<MenuCategory> onTap;
+
+  @override
+  State<_Chips> createState() => _ChipsState();
+}
+
+class _ChipsState extends State<_Chips> {
+  final _keys = <String, GlobalKey>{};
+
+  @override
+  void didUpdateWidget(_Chips old) {
+    super.didUpdateWidget(old);
+    // Активный чип держим в зоне видимости горизонтального списка.
+    if (old.activeId != widget.activeId && widget.activeId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _keys[widget.activeId]?.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: Motion.of(context, Motion.medium),
+            curve: Motion.curve,
+            alignment: 0.3,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = Motion.of(context, Motion.medium);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter, vertical: HcSpace.m),
+      child: Row(
+        children: [
+          for (final c in widget.categories)
+            Padding(
+              key: _keys.putIfAbsent(c.id, GlobalKey.new),
+              padding: const EdgeInsets.only(right: HcSpace.s),
+              child: Pressable(
+                haptic: true,
+                scale: 0.95,
+                onTap: () => widget.onTap(c),
+                child: AnimatedContainer(
+                  duration: d,
+                  curve: Motion.curve,
+                  padding: const EdgeInsets.symmetric(horizontal: HcSpace.l, vertical: HcSpace.s),
+                  decoration: BoxDecoration(
+                    color: c.id == widget.activeId
+                        ? HcColors.accent.withValues(alpha: 0.16)
+                        : Colors.white.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(HcRadii.pill),
+                    border: Border.all(
+                      color: c.id == widget.activeId ? HcColors.accent.withValues(alpha: 0.5) : HcColors.hairline,
+                      width: 0.8,
                     ),
+                  ),
+                  child: AnimatedDefaultTextStyle(
+                    duration: d,
+                    style: HcType.sans(
+                      size: 14,
+                      weight: c.id == widget.activeId ? 600 : 500,
+                      color: c.id == widget.activeId ? HcColors.accentDark : HcColors.text,
+                      height: 1.2,
+                    ),
+                    child: Text(c.title),
                   ),
                 ),
               ),
@@ -180,47 +416,6 @@ class _SectionSwitch extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ChipsHeader extends SliverPersistentHeaderDelegate {
-  _ChipsHeader({required this.categories, required this.activeId, required this.onTap});
-
-  final List<MenuCategory> categories;
-  final String? activeId;
-  final ValueChanged<MenuCategory> onTap;
-
-  static const _height = 64.0;
-
-  @override
-  double get minExtent => _height;
-  @override
-  double get maxExtent => _height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return ColoredBox(
-      color: HcColors.background.withValues(alpha: overlapsContent || shrinkOffset > 0 ? 0.94 : 0),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final c = categories[i];
-          final selected = c.id == activeId;
-          return ChoiceChip(
-            label: Text(c.title),
-            selected: selected,
-            onSelected: (_) => onTap(c),
-            labelStyle: HcType.sans(size: 14, weight: 500, color: selected ? Colors.white : HcColors.text),
-          );
-        },
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_ChipsHeader old) => old.categories != categories || old.activeId != activeId;
 }
 
 class MenuItemCard extends StatelessWidget {
@@ -229,58 +424,105 @@ class MenuItemCard extends StatelessWidget {
   final MenuItem item;
   final VoidCallback onTap;
 
+  static const photoSize = 92.0;
+
   @override
   Widget build(BuildContext context) {
     return SoftCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(HcSpace.m),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (item.imageUrl != null) ...[
-            ClipRRect(
+          // Место под фото есть всегда — меню выглядит ровно, даже если часть фото ещё не загружена.
+          Hero(
+            tag: 'menu-photo-${item.id}',
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(HcRadii.small),
-              child: SizedBox(width: 92, height: 92, child: NetImage(item.imageUrl)),
+              child: SizedBox(width: photoSize, height: photoSize, child: NetImage(item.imageUrl)),
             ),
-            const SizedBox(width: 14),
-          ],
+          ),
+          const SizedBox(width: HcSpace.l),
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: item.imageUrl == null ? 6 : 0, top: 2),
+            child: SizedBox(
+              height: photoSize,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (item.badges.isNotEmpty) ...[
-                    Wrap(spacing: 6, runSpacing: 6, children: [for (final b in item.badges) MenuBadgeChip(b, dense: true)]),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: Text(item.title, style: HcType.serif(size: 20, weight: 600, height: 1.1))),
-                      const SizedBox(width: 10),
-                      Text(item.priceLine, style: HcType.sans(size: 15, weight: 500)),
-                    ],
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: HcType.serif(size: 20, weight: 600, height: 1.1),
                   ),
                   if (item.description != null && item.description!.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: HcSpace.xs),
                     Text(
                       item.description!,
-                      maxLines: 2,
+                      maxLines: item.badges.isEmpty ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
-                      style: HcType.sans(size: 13.5, color: HcColors.textSecondary, height: 1.35),
+                      style: HcType.sans(size: 13, color: HcColors.textSecondary, height: 1.35),
                     ),
                   ],
-                  if (item.portion != null) ...[
-                    const SizedBox(height: 6),
-                    Text(item.portion!, style: HcType.sans(size: 12.5, color: HcColors.textSecondary)),
-                  ],
+                  const Spacer(),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: item.badges.isEmpty
+                            ? const SizedBox.shrink()
+                            : ClipRect(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [for (final b in item.badges.take(2)) MenuBadgeChip(b, dense: true)],
+                                ),
+                              ),
+                      ),
+                      if (item.priceLine.isNotEmpty) ...[
+                        const SizedBox(width: HcSpace.s),
+                        Text(item.priceLine, style: HcType.sans(size: 15, weight: 600)),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MenuSkeleton extends StatelessWidget {
+  const _MenuSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+      children: [
+        const SizedBox(height: 76),
+        const SkeletonBox(height: 52, radius: 26),
+        const SizedBox(height: HcSpace.xl),
+        for (var i = 0; i < 4; i++) ...[
+          const Row(
+            children: [
+              SkeletonBox(height: 92, width: 92, radius: 14),
+              SizedBox(width: HcSpace.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [SkeletonBox(height: 18, width: 140), SizedBox(height: 10), SkeletonBox(height: 12)],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: HcSpace.l),
+        ],
+      ],
     );
   }
 }

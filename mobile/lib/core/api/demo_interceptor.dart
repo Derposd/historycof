@@ -20,7 +20,11 @@ class DemoInterceptor extends Interceptor {
     Never fail(int code, String error, String message) {
       throw DioException(
         requestOptions: o,
-        response: Response(requestOptions: o, statusCode: code, data: {'statusCode': code, 'error': error, 'message': message}),
+        response: Response(
+          requestOptions: o,
+          statusCode: code,
+          data: {'statusCode': code, 'error': error, 'message': message},
+        ),
         type: DioExceptionType.badResponse,
       );
     }
@@ -57,7 +61,10 @@ class DemoInterceptor extends Interceptor {
         case ('GET', '/news'):
           body = {'items': _news, 'nextBefore': null};
         case ('GET', final p) when p.startsWith('/news/'):
-          body = _news.firstWhere((n) => n['id'] == p.substring(6), orElse: () => fail(404, 'not_found', 'Новость не найдена'));
+          body = _news.firstWhere(
+            (n) => n['id'] == p.substring(6),
+            orElse: () => fail(404, 'not_found', 'Новость не найдена'),
+          );
         case ('GET', '/menu'):
           body = _menu;
         case ('GET', '/venue'):
@@ -121,18 +128,20 @@ final _news = <Map<String, dynamic>>[
   {
     'id': 'demo-welcome',
     'title': 'Добро пожаловать в приложение History Coffee',
-    'body': 'Теперь меню, бонусы и новости кофейни всегда под рукой. '
+    'body':
+        'Теперь меню, бонусы и новости кофейни всегда под рукой. '
         'Покажите QR-код бариста, чтобы копить и тратить бонусы. '
         'Место для ваших историй: Нальчик, ул. Толстого, 43.\n\n'
         'Это демо-версия: новости будут публиковаться из админки кофейни.',
-    'imageUrl': null,
+    'imageUrl': 'asset:assets/demo/cappuccino.jpg',
     'pinned': true,
     'publishedAt': _now.toIso8601String(),
   },
   {
     'id': 'demo-card',
     'title': 'Как работает бонусная карта',
-    'body': 'Войдите по номеру телефона на вкладке «Бонусы» — карта появится сразу. '
+    'body':
+        'Войдите по номеру телефона на вкладке «Бонусы» — карта появится сразу. '
         'На кассе покажите QR-код: бариста отсканирует его, и бонусы начислятся или спишутся. '
         'Баланс и история операций обновляются в приложении.',
     'imageUrl': null,
@@ -158,9 +167,9 @@ final _menu = <String, dynamic>{
             {
               'id': 'demo-dish',
               'title': 'Пример блюда',
-              'description': 'Демо-позиция: так в приложении выглядит блюдо. Настоящее меню вносится в админке.',
+              'description': 'Демо-позиция. Фото, состав, цены и бейджи каждого блюда кофейня добавляет в админке.',
               'portion': null,
-              'imageUrl': null,
+              'imageUrl': 'asset:assets/demo/dish.jpg',
               'prices': <Map<String, dynamic>>[],
               'badges': ['team_choice', 'story'],
               'story': 'Здесь будет короткая легенда блюда — для позиций с пометкой «Блюдо с историей».',
@@ -183,7 +192,7 @@ final _menu = <String, dynamic>{
               'title': 'Капучино',
               'description': null,
               'portion': null,
-              'imageUrl': null,
+              'imageUrl': 'asset:assets/demo/cappuccino.jpg',
               'prices': [
                 {'label': 'S', 'amount': 270},
                 {'label': 'L', 'amount': 290},

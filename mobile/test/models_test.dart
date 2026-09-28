@@ -28,9 +28,13 @@ void main() {
 
   group('ApiException', () {
     DioException err(int status, Object data) => DioException(
-          requestOptions: RequestOptions(path: '/x'),
-          response: Response(requestOptions: RequestOptions(path: '/x'), statusCode: status, data: data),
-        );
+      requestOptions: RequestOptions(path: '/x'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/x'),
+        statusCode: status,
+        data: data,
+      ),
+    );
 
     test('строковое сообщение и код', () {
       final e = ApiException.fromDio(err(400, {'error': 'otp_invalid', 'message': 'Неверный код', 'attemptsLeft': 3}));
@@ -40,7 +44,11 @@ void main() {
     });
 
     test('массив сообщений валидации — берём первое', () {
-      final e = ApiException.fromDio(err(400, {'message': ['Сообщение от 3 до 3000 символов', 'x']}));
+      final e = ApiException.fromDio(
+        err(400, {
+          'message': ['Сообщение от 3 до 3000 символов', 'x'],
+        }),
+      );
       expect(e.message, 'Сообщение от 3 до 3000 символов');
     });
 
@@ -89,7 +97,10 @@ void main() {
     test('маршрут по координатам', () {
       final y = Links.yandexMaps(address: '', lat: 43.48, lng: 43.6);
       expect(y.queryParameters['rtext'], '~43.48,43.6');
-      expect(Links.twoGis(address: '', lat: 43.48, lng: 43.6).toString(), 'https://2gis.ru/routeSearch/rsType/car/to/43.6,43.48');
+      expect(
+        Links.twoGis(address: '', lat: 43.48, lng: 43.6).toString(),
+        'https://2gis.ru/routeSearch/rsType/car/to/43.6,43.48',
+      );
     });
   });
 }

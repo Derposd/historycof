@@ -22,22 +22,22 @@ class GuestProfile {
   final bool consentRequired;
 
   factory GuestProfile.fromJson(Map<String, dynamic> j) => GuestProfile(
-        id: j['id'] as String,
-        phone: j['phone'] as String,
-        name: j['name'] as String?,
-        birthday: j['birthday'] as String?,
-        pushNewsEnabled: j['pushNewsEnabled'] as bool? ?? true,
-        consentRequired: j['consentRequired'] as bool? ?? false,
-      );
+    id: j['id'] as String,
+    phone: j['phone'] as String,
+    name: j['name'] as String?,
+    birthday: j['birthday'] as String?,
+    pushNewsEnabled: j['pushNewsEnabled'] as bool? ?? true,
+    consentRequired: j['consentRequired'] as bool? ?? false,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'phone': phone,
-        'name': name,
-        'birthday': birthday,
-        'pushNewsEnabled': pushNewsEnabled,
-        'consentRequired': consentRequired,
-      };
+    'id': id,
+    'phone': phone,
+    'name': name,
+    'birthday': birthday,
+    'pushNewsEnabled': pushNewsEnabled,
+    'consentRequired': consentRequired,
+  };
 }
 
 class OtpRequestResult {
@@ -49,7 +49,7 @@ class OtpRequestResult {
   final bool isNewUser;
 
   factory OtpRequestResult.fromJson(Map<String, dynamic> j) => OtpRequestResult(
-        resendInSec: (j['resendInSec'] as num?)?.toInt() ?? 60,
-        isNewUser: j['isNewUser'] as bool? ?? false,
-      );
+    resendInSec: (j['resendInSec'] as num?)?.toInt() ?? 60,
+    isNewUser: j['isNewUser'] as bool? ?? false,
+  );
 }

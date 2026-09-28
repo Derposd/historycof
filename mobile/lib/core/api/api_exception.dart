@@ -22,8 +22,7 @@ class ApiException implements Exception {
         message: switch (e.type) {
           DioExceptionType.connectionTimeout ||
           DioExceptionType.receiveTimeout ||
-          DioExceptionType.sendTimeout =>
-            'Сервер долго не отвечает. Проверьте интернет и попробуйте ещё раз',
+          DioExceptionType.sendTimeout => 'Сервер долго не отвечает. Проверьте интернет и попробуйте ещё раз',
           _ => 'Нет соединения с интернетом',
         },
       );
@@ -36,29 +35,24 @@ class ApiException implements Exception {
       _ => _fallback(res.statusCode),
     };
     final error = body['error'];
-    return ApiException(
-      message: message,
-      code: error is String ? error : null,
-      statusCode: res.statusCode,
-      data: body,
-    );
+    return ApiException(message: message, code: error is String ? error : null, statusCode: res.statusCode, data: body);
   }
 
   static String _fallback(int? status) => switch (status) {
-        401 => 'Сессия истекла, войдите заново',
-        403 => 'Недостаточно прав',
-        404 => 'Не найдено',
-        429 => 'Слишком много попыток, подождите немного',
-        503 => 'Сервис временно недоступен',
-        _ => 'Что-то пошло не так. Попробуйте ещё раз',
-      };
+    401 => 'Сессия истекла, войдите заново',
+    403 => 'Недостаточно прав',
+    404 => 'Не найдено',
+    429 => 'Слишком много попыток, подождите немного',
+    503 => 'Сервис временно недоступен',
+    _ => 'Что-то пошло не так. Попробуйте ещё раз',
+  };
 
   /// Текст для показа пользователю из любой ошибки.
   static String messageOf(Object error) => switch (error) {
-        final ApiException e => e.message,
-        final DioException e => ApiException.fromDio(e).message,
-        _ => 'Что-то пошло не так. Попробуйте ещё раз',
-      };
+    final ApiException e => e.message,
+    final DioException e => ApiException.fromDio(e).message,
+    _ => 'Что-то пошло не так. Попробуйте ещё раз',
+  };
 
   @override
   String toString() => 'ApiException($statusCode, $code, $message)';

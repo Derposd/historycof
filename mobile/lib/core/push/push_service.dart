@@ -86,10 +86,12 @@ class PushService {
     final token = _token;
     if (!_enabled || token == null) return;
     try {
-      await _ref.read(apiClientProvider).post<void>('/devices', data: {
-        'token': token,
-        'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
-      });
+      await _ref
+          .read(apiClientProvider)
+          .post<void>(
+            '/devices',
+            data: {'token': token, 'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'},
+          );
     } catch (e) {
       debugPrint('Push: не удалось зарегистрировать устройство: $e');
     }

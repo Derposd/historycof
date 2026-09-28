@@ -42,18 +42,18 @@ class Venue {
   final List<DayHours> hours;
 
   factory Venue.fromJson(Map<String, dynamic> j) => Venue(
-        name: j['name'] as String,
-        tagline: j['tagline'] as String? ?? '',
-        address: j['address'] as String,
-        lat: (j['lat'] as num?)?.toDouble(),
-        lng: (j['lng'] as num?)?.toDouble(),
-        phone: j['phone'] as String,
-        whatsapp: j['whatsapp'] as String,
-        instagram: j['instagram'] as String,
-        website: j['website'] as String?,
-        legalName: j['legalName'] as String? ?? '',
-        hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
-      );
+    name: j['name'] as String,
+    tagline: j['tagline'] as String? ?? '',
+    address: j['address'] as String,
+    lat: (j['lat'] as num?)?.toDouble(),
+    lng: (j['lng'] as num?)?.toDouble(),
+    phone: j['phone'] as String,
+    whatsapp: j['whatsapp'] as String,
+    instagram: j['instagram'] as String,
+    website: j['website'] as String?,
+    legalName: j['legalName'] as String? ?? '',
+    hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
+  );
 
   /// Данные из брифа — показываем, пока не пришёл ответ сервера или нет сети.
   static const fallback = Venue(
@@ -137,14 +137,14 @@ String describeOpenState(OpenState s, DateTime msk) {
   final when = s.nextOpenDay == today
       ? 'сегодня'
       : s.nextOpenDay == tomorrow
-          ? 'завтра'
-          : 'в ${_accusative(weekdayNames[s.nextOpenDay! - 1])}';
+      ? 'завтра'
+      : 'в ${_accusative(weekdayNames[s.nextOpenDay! - 1])}';
   return 'Закрыто · откроется $when в ${s.nextOpenTime}';
 }
 
 String _accusative(String day) => switch (day) {
-      'среда' => 'среду',
-      'пятница' => 'пятницу',
-      'суббота' => 'субботу',
-      _ => day,
-    };
+  'среда' => 'среду',
+  'пятница' => 'пятницу',
+  'суббота' => 'субботу',
+  _ => day,
+};

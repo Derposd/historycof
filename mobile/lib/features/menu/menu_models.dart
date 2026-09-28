@@ -57,20 +57,20 @@ class MenuItem {
   }
 
   factory MenuItem.fromJson(Map<String, dynamic> j) => MenuItem(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        description: j['description'] as String?,
-        portion: j['portion'] as String?,
-        imageUrl: j['imageUrl'] as String?,
-        prices: (j['prices'] as List<dynamic>? ?? const [])
-            .map((e) => MenuPrice.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        badges: (j['badges'] as List<dynamic>? ?? const [])
-            .map((e) => MenuBadge.fromCode(e as String))
-            .whereType<MenuBadge>()
-            .toList(),
-        story: j['story'] as String?,
-      );
+    id: j['id'] as String,
+    title: j['title'] as String,
+    description: j['description'] as String?,
+    portion: j['portion'] as String?,
+    imageUrl: j['imageUrl'] as String?,
+    prices: (j['prices'] as List<dynamic>? ?? const [])
+        .map((e) => MenuPrice.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    badges: (j['badges'] as List<dynamic>? ?? const [])
+        .map((e) => MenuBadge.fromCode(e as String))
+        .whereType<MenuBadge>()
+        .toList(),
+    story: j['story'] as String?,
+  );
 }
 
 class MenuCategory {
@@ -81,10 +81,10 @@ class MenuCategory {
   final List<MenuItem> items;
 
   factory MenuCategory.fromJson(Map<String, dynamic> j) => MenuCategory(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        items: (j['items'] as List<dynamic>).map((e) => MenuItem.fromJson(e as Map<String, dynamic>)).toList(),
-      );
+    id: j['id'] as String,
+    title: j['title'] as String,
+    items: (j['items'] as List<dynamic>).map((e) => MenuItem.fromJson(e as Map<String, dynamic>)).toList(),
+  );
 }
 
 class MenuSection {
@@ -98,12 +98,13 @@ class MenuSection {
   final List<MenuCategory> categories;
 
   factory MenuSection.fromJson(Map<String, dynamic> j) => MenuSection(
-        id: j['id'] as String,
-        slug: j['slug'] as String,
-        title: j['title'] as String,
-        categories:
-            (j['categories'] as List<dynamic>).map((e) => MenuCategory.fromJson(e as Map<String, dynamic>)).toList(),
-      );
+    id: j['id'] as String,
+    slug: j['slug'] as String,
+    title: j['title'] as String,
+    categories: (j['categories'] as List<dynamic>)
+        .map((e) => MenuCategory.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 class MenuData {
@@ -113,10 +114,10 @@ class MenuData {
   final String disclaimer;
 
   factory MenuData.fromJson(Map<String, dynamic> j) => MenuData(
-        sections: (j['sections'] as List<dynamic>).map((e) => MenuSection.fromJson(e as Map<String, dynamic>)).toList(),
-        disclaimer: j['disclaimer'] as String? ??
-            'Цены и состав блюд носят информационный характер, актуальное меню — в кофейне',
-      );
+    sections: (j['sections'] as List<dynamic>).map((e) => MenuSection.fromJson(e as Map<String, dynamic>)).toList(),
+    disclaimer:
+        j['disclaimer'] as String? ?? 'Цены и состав блюд носят информационный характер, актуальное меню — в кофейне',
+  );
 }
 
 final menuProvider = FutureProvider<MenuData>((ref) async {

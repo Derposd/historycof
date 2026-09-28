@@ -45,38 +45,46 @@ class SimpleMarkdown extends StatelessWidget {
       final block = raw.trim();
       if (block.isEmpty) continue;
       if (block.startsWith('# ')) {
-        blocks.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(block.substring(2), style: HcType.serif(size: 30, weight: 500)),
-        ));
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(block.substring(2), style: HcType.serif(size: 30, weight: 500)),
+          ),
+        );
       } else if (block.startsWith('## ')) {
-        blocks.add(Padding(
-          padding: const EdgeInsets.only(top: 18, bottom: 6),
-          child: Text(block.substring(3), style: HcType.serif(size: 22, weight: 600)),
-        ));
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 18, bottom: 6),
+            child: Text(block.substring(3), style: HcType.serif(size: 22, weight: 600)),
+          ),
+        );
       } else if (block.startsWith('- ')) {
         for (final line in block.split('\n')) {
-          blocks.add(Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('—  ', style: HcType.sans(color: HcColors.accent)),
-                Expanded(child: Text(line.replaceFirst(RegExp(r'^-\s*'), ''), style: HcType.sans(size: 15))),
-              ],
+          blocks.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('—  ', style: HcType.sans(color: HcColors.accent)),
+                  Expanded(child: Text(line.replaceFirst(RegExp(r'^-\s*'), ''), style: HcType.sans(size: 15))),
+                ],
+              ),
             ),
-          ));
+          );
         }
       } else {
-        blocks.add(Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text(block.replaceAll('\n', ' '), style: HcType.sans(size: 15, height: 1.55)),
-        ));
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(block.replaceAll('\n', ' '), style: HcType.sans(size: 15, height: 1.55)),
+          ),
+        );
       }
     }
     return SelectionArea(
       child: ListView(
-        padding: EdgeInsets.fromLTRB(22, 8, 22, MediaQuery.paddingOf(context).bottom + 32),
+        padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.paddingOf(context).bottom + 32),
         children: blocks,
       ),
     );

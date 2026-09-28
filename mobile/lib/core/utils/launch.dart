@@ -5,11 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 abstract final class Links {
   static Uri call(String phoneE164) => Uri(scheme: 'tel', path: phoneE164);
 
-  static Uri whatsapp(String phoneE164, {String? text}) => Uri.https(
-        'wa.me',
-        '/${phoneE164.replaceAll(RegExp(r'\D'), '')}',
-        text == null ? null : {'text': text},
-      );
+  static Uri whatsapp(String phoneE164, {String? text}) =>
+      Uri.https('wa.me', '/${phoneE164.replaceAll(RegExp(r'\D'), '')}', text == null ? null : {'text': text});
 
   static Uri instagram(String account) => Uri.https('instagram.com', '/$account/');
 
@@ -21,8 +18,11 @@ abstract final class Links {
       ? Uri.parse('https://2gis.ru/routeSearch/rsType/car/to/$lng,$lat')
       : Uri.parse('https://2gis.ru/search/${Uri.encodeComponent(address)}');
 
-  static Uri googleMaps({required String address, double? lat, double? lng}) =>
-      Uri.https('www.google.com', '/maps/dir/', {'api': '1', 'destination': lat != null && lng != null ? '$lat,$lng' : address});
+  static Uri googleMaps({required String address, double? lat, double? lng}) => Uri.https(
+    'www.google.com',
+    '/maps/dir/',
+    {'api': '1', 'destination': lat != null && lng != null ? '$lat,$lng' : address},
+  );
 
   static Uri appleMaps({required String address, double? lat, double? lng}) =>
       Uri.https('maps.apple.com', '/', {'daddr': lat != null && lng != null ? '$lat,$lng' : address});

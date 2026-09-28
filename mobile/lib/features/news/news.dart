@@ -20,13 +20,13 @@ class NewsPost {
   final DateTime publishedAt;
 
   factory NewsPost.fromJson(Map<String, dynamic> j) => NewsPost(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        body: j['body'] as String,
-        imageUrl: j['imageUrl'] as String?,
-        pinned: j['pinned'] as bool? ?? false,
-        publishedAt: DateTime.parse(j['publishedAt'] as String),
-      );
+    id: j['id'] as String,
+    title: j['title'] as String,
+    body: j['body'] as String,
+    imageUrl: j['imageUrl'] as String?,
+    pinned: j['pinned'] as bool? ?? false,
+    publishedAt: DateTime.parse(j['publishedAt'] as String),
+  );
 }
 
 class NewsPage {

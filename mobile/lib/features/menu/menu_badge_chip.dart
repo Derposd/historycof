@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/net_image.dart';
 import 'menu_models.dart';
 
-/// Бейджи в духе сайта: «NEW» и «Хит продаж» — приглушённое золото,
-/// «Выбор команды» — оливковый, «Блюдо с историей» — тонкая обводка с пером.
+/// Бейджи меню: «NEW» и «Хит продаж» — приглушённое золото, «Выбор команды» — олива,
+/// «Блюдо с историей» — тонкая обводка с иконкой книги.
 class MenuBadgeChip extends StatelessWidget {
   const MenuBadgeChip(this.badge, {super.key, this.dense = false});
 
@@ -16,10 +15,18 @@ class MenuBadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (badge) {
-      MenuBadge.isNew || MenuBadge.bestseller => (HcColors.gold.withValues(alpha: 0.85), HcColors.text, Colors.transparent),
+      MenuBadge.isNew ||
+      MenuBadge.bestseller => (HcColors.gold.withValues(alpha: 0.55), HcColors.text, Colors.transparent),
       MenuBadge.teamChoice => (HcColors.accent.withValues(alpha: 0.16), HcColors.accentDark, Colors.transparent),
-      MenuBadge.story => (Colors.transparent, HcColors.text, HcColors.text.withValues(alpha: 0.35)),
+      MenuBadge.story => (Colors.transparent, HcColors.text, HcColors.text.withValues(alpha: 0.25)),
     };
+    final icon = switch (badge) {
+      MenuBadge.story => Icons.menu_book_outlined,
+      MenuBadge.teamChoice => Icons.favorite_border_rounded,
+      MenuBadge.bestseller => Icons.local_fire_department_outlined,
+      MenuBadge.isNew => null,
+    };
+    final size = dense ? 11.0 : 12.5;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: dense ? 8 : 10, vertical: dense ? 3 : 5),
       decoration: BoxDecoration(
@@ -30,20 +37,13 @@ class MenuBadgeChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (badge == MenuBadge.story) ...[
-            FeatherMark(color: HcColors.text.withValues(alpha: 0.8)).sized(dense ? 9 : 11),
-            const SizedBox(width: 5),
-          ],
+          if (icon != null) ...[Icon(icon, size: size + 1, color: fg), const SizedBox(width: 4)],
           Text(
-            badge == MenuBadge.isNew ? badge.label : badge.label.toUpperCase(),
-            style: HcType.caps(size: dense ? 9.5 : 10.5, color: fg, weight: 600),
+            badge.label,
+            style: HcType.sans(size: size, weight: 600, color: fg, height: 1.2),
           ),
         ],
       ),
     );
   }
-}
-
-extension on FeatherMark {
-  Widget sized(double h) => SizedBox(height: h, width: h * 0.66, child: FittedBox(child: this));
 }

@@ -23,9 +23,7 @@ String formatRub(num n) => '${formatNumber(n)} ₽';
 String formatNewsDate(DateTime d, {DateTime? now}) {
   final local = d.toLocal();
   final ref = now ?? DateTime.now();
-  return local.year == ref.year
-      ? DateFormat('d MMMM', 'ru').format(local)
-      : DateFormat('d MMMM y', 'ru').format(local);
+  return local.year == ref.year ? DateFormat('d MMMM', 'ru').format(local) : DateFormat('d MMMM y', 'ru').format(local);
 }
 
 /// «28 сент., 14:05»
@@ -57,7 +55,10 @@ class RuPhoneInputFormatter extends TextInputFormatter {
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.substring(1);
     if (digits.length > 10) digits = digits.substring(0, 10);
     final text = maskPhone(digits);
-    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 
   static String maskPhone(String d) {

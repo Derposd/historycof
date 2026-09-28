@@ -15,7 +15,10 @@ void main() {
       dio.post<dynamic>('/auth/otp/verify', data: {'phone': '+79001112233', 'code': '0000'}),
       throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'status', 400)),
     );
-    final res = await dio.post<Map<String, dynamic>>('/auth/otp/verify', data: {'phone': '+79001112233', 'code': '1234', 'name': 'Мадина'});
+    final res = await dio.post<Map<String, dynamic>>(
+      '/auth/otp/verify',
+      data: {'phone': '+79001112233', 'code': '1234', 'name': 'Мадина'},
+    );
     expect(res.data!['guest']['name'], 'Мадина');
     final me = await dio.get<Map<String, dynamic>>('/me');
     expect(me.data!['phone'], '+79001112233');

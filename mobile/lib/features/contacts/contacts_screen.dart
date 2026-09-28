@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/colors.dart';
+import '../../core/theme/theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/utils/launch.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/motion.dart';
 import 'contacts_providers.dart';
 import 'venue.dart';
 
@@ -20,110 +22,120 @@ class ContactsScreen extends ConsumerWidget {
     final venue = ref.watch(venueProvider).value ?? Venue.fallback;
     final open = ref.watch(openStateProvider);
     final today = mskNow().weekday;
+    const h = EdgeInsets.symmetric(horizontal: HcSpace.gutter);
 
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 110),
+        padding: EdgeInsets.only(bottom: HcSpace.navInset(context)),
         children: [
-          const ScreenTitle('Контакты', overline: 'Как нас найти'),
+          const ScreenTitle('Контакты'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Glass(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            padding: h,
+            child: FadeSlideIn(
+              child: Glass(
+                padding: const EdgeInsets.all(HcSpace.card),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _OpenIndicator(state: open, text: describeOpenState(open, mskNow())),
+                    const SizedBox(height: HcSpace.l),
+                    const SectionLabel('Адрес'),
+                    const SizedBox(height: HcSpace.xs),
+                    Text(venue.address, style: HcType.serif(size: 26, weight: 600, height: 1.15)),
+                    const SizedBox(height: HcSpace.l),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _showRouteSheet(context, venue),
+                        icon: const Icon(Icons.near_me_outlined, size: 20),
+                        label: const Text('Построить маршрут'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: HcSpace.listGap),
+          Padding(
+            padding: h,
+            child: FadeSlideIn(
+              index: 1,
+              child: Row(
                 children: [
-                  _OpenIndicator(state: open, text: describeOpenState(open, mskNow())),
-                  const SizedBox(height: 16),
-                  const CapsLabel('Адрес'),
-                  const SizedBox(height: 6),
-                  Text(venue.address, style: HcType.serif(size: 26, weight: 500)),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => _showRouteSheet(context, venue),
-                      icon: const Icon(Icons.near_me_outlined, size: 20),
-                      label: const Text('Маршрут'),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.call_outlined,
+                      label: 'Позвонить',
+                      onTap: () => openExternal(Links.call(venue.phone)),
+                    ),
+                  ),
+                  const SizedBox(width: HcSpace.listGap),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'WhatsApp',
+                      onTap: () => openExternal(Links.whatsapp(venue.whatsapp)),
+                    ),
+                  ),
+                  const SizedBox(width: HcSpace.listGap),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Instagram',
+                      onTap: () => openExternal(Links.instagram(venue.instagram)),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('Часы работы')),
+          const SizedBox(height: HcSpace.s),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ActionTile(
-                    icon: Icons.call_outlined,
-                    label: 'Позвонить',
-                    onTap: () => openExternal(Links.call(venue.phone)),
-                  ),
+            padding: h,
+            child: FadeSlideIn(
+              index: 2,
+              child: SoftCard(
+                padding: const EdgeInsets.symmetric(horizontal: HcSpace.l, vertical: HcSpace.xs),
+                child: Column(
+                  children: [
+                    for (final hrs in [...venue.hours]..sort((a, b) => a.day.compareTo(b.day)))
+                      _HoursRow(hours: hrs, isToday: hrs.day == today, isLast: hrs.day == 7),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ActionTile(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    label: 'Написать',
-                    onTap: () => openExternal(Links.whatsapp(venue.whatsapp)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ActionTile(
-                    icon: Icons.photo_camera_outlined,
-                    label: 'Instagram',
-                    onTap: () => openExternal(Links.instagram(venue.instagram)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 26),
-          const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('Часы работы')),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: SoftCard(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-              child: Column(
-                children: [
-                  for (final h in [...venue.hours]..sort((a, b) => a.day.compareTo(b.day)))
-                    _HoursRow(hours: h, isToday: h.day == today, isLast: h.day == 7),
-                ],
               ),
             ),
           ),
-          const SizedBox(height: 26),
-          const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('Телефон')),
-          const SizedBox(height: 6),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('Телефон')),
+          const SizedBox(height: HcSpace.xs),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
-            child: GestureDetector(
+            padding: h,
+            child: Pressable(
               onTap: () => openExternal(Links.call(venue.phone)),
-              child: Text(formatPhone(venue.phone), style: HcType.serif(size: 26, weight: 500)),
+              child: Text(formatPhone(venue.phone), style: HcType.serif(size: 26, weight: 600)),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: HcSpace.section),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: h,
             child: SoftCard(
               onTap: () => context.push('/feedback/new'),
               child: Row(
                 children: [
-                  const RoundOutlineIcon(Icons.edit_note_rounded),
-                  const SizedBox(width: 14),
+                  const IconTile(Icons.edit_note_rounded),
+                  const SizedBox(width: HcSpace.m),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Обратная связь', style: HcType.serif(size: 21, weight: 600)),
+                        const SizedBox(height: 2),
                         Text(
-                          'Жалоба, предложение или спасибо — мы читаем каждое сообщение',
+                          'Жалоба, идея или спасибо — ответим в приложении',
                           style: HcType.sans(size: 13, color: HcColors.textSecondary),
                         ),
                       ],
@@ -134,37 +146,97 @@ class ContactsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 28),
-          Center(child: Text(venue.legalName, style: HcType.sans(size: 12, color: HcColors.textSecondary))),
+          const SizedBox(height: HcSpace.section),
+          Center(
+            child: Text(venue.legalName, style: HcType.sans(size: 12, color: HcColors.textSecondary)),
+          ),
         ],
       ),
     );
   }
 }
 
-class _OpenIndicator extends StatelessWidget {
+class _OpenIndicator extends StatefulWidget {
   const _OpenIndicator({required this.state, required this.text});
 
   final OpenState state;
   final String text;
 
   @override
+  State<_OpenIndicator> createState() => _OpenIndicatorState();
+}
+
+/// Статус работы; когда открыто, точка мягко «дышит».
+class _OpenIndicatorState extends State<_OpenIndicator> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_OpenIndicator old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  void _sync() {
+    if (widget.state.isOpen && !Motion.reduced(context)) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = state.isOpen ? HcColors.accent : HcColors.terracotta;
+    final open = widget.state.isOpen;
+    final color = open ? HcColors.accent : HcColors.terracotta;
     return Semantics(
       liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: AnimatedContainer(
+        duration: Motion.of(context, Motion.medium),
+        padding: const EdgeInsets.symmetric(horizontal: HcSpace.m, vertical: 7),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(999)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-            const SizedBox(width: 8),
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, _) => Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: open
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.5 * (1 - _pulse.value)),
+                            blurRadius: 0,
+                            spreadRadius: 5 * _pulse.value,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: HcSpace.s),
             Flexible(
               child: Text(
-                text,
-                style: HcType.sans(size: 13, weight: 500, color: state.isOpen ? HcColors.accentDark : HcColors.terracotta),
+                widget.text,
+                style: HcType.sans(size: 13, weight: 600, color: open ? HcColors.accentDark : HcColors.terracotta),
               ),
             ),
           ],
@@ -189,12 +261,12 @@ class _ActionTile extends StatelessWidget {
       excludeSemantics: true,
       child: SoftCard(
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: HcSpace.l),
         child: Column(
           children: [
-            RoundOutlineIcon(icon, size: 42),
-            const SizedBox(height: 8),
-            Text(label.toUpperCase(), style: HcType.caps(size: 10.5, color: HcColors.text)),
+            IconTile(icon, size: 42),
+            const SizedBox(height: HcSpace.s),
+            Text(label, style: HcType.sans(size: 13, weight: 500)),
           ],
         ),
       ),
@@ -211,17 +283,33 @@ class _HoursRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = HcType.sans(size: 15, weight: isToday ? 600 : 400, color: isToday ? HcColors.text : HcColors.textSecondary);
+    final style = HcType.sans(
+      size: 15,
+      weight: isToday ? 600 : 400,
+      color: isToday ? HcColors.text : HcColors.textSecondary,
+    );
     final name = weekdayNames[hours.day - 1];
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      decoration: BoxDecoration(border: isLast ? null : const Border(bottom: BorderSide(color: HcColors.hairline, width: 0.6))),
+      padding: const EdgeInsets.symmetric(vertical: HcSpace.m),
+      decoration: BoxDecoration(
+        border: isLast ? null : const Border(bottom: BorderSide(color: HcColors.hairline, width: 0.6)),
+      ),
       child: Row(
         children: [
           Text('${name[0].toUpperCase()}${name.substring(1)}', style: style),
           if (isToday) ...[
-            const SizedBox(width: 8),
-            const CapsLabel('сегодня', color: HcColors.accentDark, size: 9.5),
+            const SizedBox(width: HcSpace.s),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.s, vertical: 2),
+              decoration: BoxDecoration(
+                color: HcColors.accent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'сегодня',
+                style: HcType.sans(size: 11, weight: 600, color: HcColors.accentDark, height: 1.3),
+              ),
+            ),
           ],
           const Spacer(),
           Text(hours.isDayOff ? 'выходной' : '${hours.open} – ${hours.close}', style: style),
@@ -242,12 +330,13 @@ void _showRouteSheet(BuildContext context, Venue v) {
   showModalBottomSheet<void>(
     context: context,
     useSafeArea: true,
+    sheetAnimationStyle: AnimationStyle(duration: Motion.of(context, Motion.slow), curve: Motion.emphasized),
     builder: (context) => Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(HcSpace.m),
       child: Glass(
         radius: 26,
         fill: HcColors.glassFillStrong,
-        padding: const EdgeInsets.fromLTRB(8, 18, 8, 8),
+        padding: const EdgeInsets.fromLTRB(HcSpace.s, HcSpace.l, HcSpace.s, HcSpace.s),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

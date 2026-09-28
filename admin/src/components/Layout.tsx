@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth-context'
 import type { AnalyticsSummary } from '../types'
+import { Logo } from './Monogram'
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -17,8 +18,7 @@ export function Layout() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <div className="brand">HISTORY</div>
-        <div className="brand-sub caps">админка кофейни</div>
+        <Logo size={40} />
         <NavLink to="/" end className="nav-link">
           Обзор
         </NavLink>

@@ -2,23 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../api/api_exception.dart';
 import '../theme/colors.dart';
+import '../theme/theme.dart';
 import '../theme/typography.dart';
 
-/// Капслок-лейбл с трекингом.
-class CapsLabel extends StatelessWidget {
-  const CapsLabel(this.text, {super.key, this.color = HcColors.textSecondary, this.size = 11.5});
+/// Подпись раздела: спокойный текст в строку (без капслока и разрядки).
+class SectionLabel extends StatelessWidget {
+  const SectionLabel(this.text, {super.key, this.color = HcColors.textSecondary, this.size = 13});
 
   final String text;
   final Color color;
   final double size;
 
   @override
-  Widget build(BuildContext context) => Text(text.toUpperCase(), style: HcType.caps(size: size, color: color));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: HcType.sans(size: size, weight: 500, color: color, height: 1.25, letterSpacing: 0.1),
+  );
 }
 
-/// Лёгкая круглая иконка-аутлайн в кружке (как блок «Четыре причины зайти к нам»).
-class RoundOutlineIcon extends StatelessWidget {
-  const RoundOutlineIcon(this.icon, {super.key, this.size = 44, this.color = HcColors.accentDark});
+/// Иконка в мягкой плитке со скруглёнными углами.
+class IconTile extends StatelessWidget {
+  const IconTile(this.icon, {super.key, this.size = 44, this.color = HcColors.accentDark});
 
   final IconData icon;
   final double size;
@@ -29,27 +33,35 @@ class RoundOutlineIcon extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.45), width: 0.9),
-        color: Colors.white.withValues(alpha: 0.35),
-      ),
-      child: Icon(icon, size: size * 0.45, color: color),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * 0.32), color: color.withValues(alpha: 0.11)),
+      child: Icon(icon, size: size * 0.48, color: color),
     );
   }
 }
 
-/// Крупная декоративная кавычка для цитат и «Блюда с историей».
-class QuoteMark extends StatelessWidget {
-  const QuoteMark({super.key, this.size = 64, this.color = HcColors.gold});
+/// Выделенный текст с акцентной полосой слева (легенда блюда, ответы).
+class AccentNote extends StatelessWidget {
+  const AccentNote({super.key, required this.child, this.color = HcColors.gold});
 
-  final double size;
+  final Widget child;
   final Color color;
 
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-        child: Text('“', style: HcType.serif(size: size, weight: 500, color: color, height: 0.9)),
-      );
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 3,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
 }
 
 /// Тонкий hairline-разделитель с отступами.
@@ -61,9 +73,9 @@ class Hairline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(vertical: vertical),
-        child: Divider(indent: indent, endIndent: indent),
-      );
+    padding: EdgeInsets.symmetric(vertical: vertical),
+    child: Divider(indent: indent, endIndent: indent),
+  );
 }
 
 /// Заголовок экрана: крупный сериф + подзаголовок капслоком.
@@ -77,7 +89,7 @@ class ScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
+      padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.m, HcSpace.gutter, HcSpace.l),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -85,8 +97,8 @@ class ScreenTitle extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (overline != null) ...[CapsLabel(overline!), const SizedBox(height: 6)],
-                Text(title, style: HcType.serif(size: 36, weight: 500)),
+                if (overline != null) ...[SectionLabel(overline!), const SizedBox(height: 4)],
+                Text(title, style: HcType.serif(size: 34, weight: 600)),
               ],
             ),
           ),
@@ -112,7 +124,7 @@ class ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const RoundOutlineIcon(Icons.wifi_off_rounded, size: 56, color: HcColors.textSecondary),
+            const IconTile(Icons.wifi_off_rounded, size: 56, color: HcColors.textSecondary),
             const SizedBox(height: 16),
             Text(
               ApiException.messageOf(error),
@@ -146,12 +158,16 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          RoundOutlineIcon(icon, size: 64),
+          IconTile(icon, size: 64),
           const SizedBox(height: 18),
           Text(title, textAlign: TextAlign.center, style: HcType.serif(size: 24)),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
-            Text(subtitle!, textAlign: TextAlign.center, style: HcType.sans(color: HcColors.textSecondary)),
+            Text(
+              subtitle!,
+              textAlign: TextAlign.center,
+              style: HcType.sans(color: HcColors.textSecondary),
+            ),
           ],
           if (action != null) ...[const SizedBox(height: 20), action!],
         ],

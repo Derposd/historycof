@@ -8,12 +8,14 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/theme/theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/background.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../menu/menu_screen.dart' show SegmentedSwitch;
 import 'feedback.dart';
 
 class FeedbackFormScreen extends ConsumerStatefulWidget {
@@ -55,7 +57,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
     setState(() => _sending = true);
     try {
       final digits = phoneDigits(_phone.text);
-      await ref.read(feedbackRepositoryProvider).submit(
+      await ref
+          .read(feedbackRepositoryProvider)
+          .submit(
             type: _type,
             message: _message.text,
             contactPhone: digits.length == 10 ? '+7$digits' : null,
@@ -77,8 +81,11 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
       appBar: AppBar(title: const Text('Обратная связь')),
       body: HcBackground(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _sent ? _SentView(type: _type, signedIn: signedIn) : _buildForm(signedIn),
+          duration: Motion.of(context, Motion.slow),
+          transitionBuilder: (child, a) => fadeThroughTransition(child, a),
+          child: _sent
+              ? _SentView(key: const ValueKey('sent'), type: _type, signedIn: signedIn)
+              : KeyedSubtree(key: const ValueKey('form'), child: _buildForm(signedIn)),
         ),
       ),
     );
@@ -88,60 +95,55 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(18, 8, 18, MediaQuery.paddingOf(context).bottom + 24),
+        padding: EdgeInsets.fromLTRB(
+          HcSpace.gutter,
+          HcSpace.s,
+          HcSpace.gutter,
+          MediaQuery.paddingOf(context).bottom + HcSpace.xl,
+        ),
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              'Расскажите, что понравилось или что нам стоит исправить. Сообщение сразу получит управляющий кофейни.',
-              style: HcType.sans(color: HcColors.textSecondary),
-            ),
+          Text(
+            'Расскажите, что понравилось или что стоит исправить. Сообщение сразу получит управляющий кофейни.',
+            style: HcType.sans(color: HcColors.textSecondary),
           ),
-          const SizedBox(height: 20),
-          const CapsLabel('Тип обращения'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final t in FeedbackType.values)
-                ChoiceChip(
-                  label: Text(t.label),
-                  selected: _type == t,
-                  onSelected: (_) => setState(() => _type = t),
-                  selectedColor: t == FeedbackType.complaint ? HcColors.terracotta : HcColors.accent,
-                  labelStyle: HcType.sans(size: 14, weight: 500, color: _type == t ? Colors.white : HcColors.text),
-                ),
-            ],
+          const SizedBox(height: HcSpace.xl),
+          const SectionLabel('Тип обращения'),
+          const SizedBox(height: HcSpace.s),
+          SegmentedSwitch(
+            labels: [for (final t in FeedbackType.values) t.label],
+            index: FeedbackType.values.indexOf(_type),
+            onChanged: (i) => setState(() => _type = FeedbackType.values[i]),
           ),
-          const SizedBox(height: 22),
-          const CapsLabel('Сообщение'),
-          const SizedBox(height: 10),
+          const SizedBox(height: HcSpace.xl),
+          const SectionLabel('Сообщение'),
+          const SizedBox(height: HcSpace.s),
           TextFormField(
             controller: _message,
             minLines: 5,
             maxLines: 10,
             maxLength: 3000,
             textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(hintText: switch (_type) {
-              FeedbackType.complaint => 'Что пошло не так? Когда это было?',
-              FeedbackType.suggestion => 'Что бы вы хотели видеть в History?',
-              FeedbackType.thanks => 'Кого или что хочется поблагодарить?',
-            }),
+            decoration: InputDecoration(
+              hintText: switch (_type) {
+                FeedbackType.complaint => 'Что пошло не так? Когда это было?',
+                FeedbackType.suggestion => 'Что бы вы хотели видеть в History?',
+                FeedbackType.thanks => 'Кого или что хочется поблагодарить?',
+              },
+            ),
             validator: (v) => (v == null || v.trim().length < 3) ? 'Напишите хотя бы пару слов' : null,
           ),
-          const SizedBox(height: 14),
-          const CapsLabel('Фото (необязательно)'),
-          const SizedBox(height: 10),
+          const SizedBox(height: HcSpace.l),
+          const SectionLabel('Фото, если нужно'),
+          const SizedBox(height: HcSpace.s),
           _PhotoPicker(
             photo: _photo,
             onCamera: () => _pickPhoto(ImageSource.camera),
             onGallery: () => _pickPhoto(ImageSource.gallery),
             onRemove: () => setState(() => _photo = null),
           ),
-          const SizedBox(height: 22),
-          CapsLabel(signedIn ? 'Другой номер для связи (необязательно)' : 'Телефон для связи (необязательно)'),
-          const SizedBox(height: 10),
+          const SizedBox(height: HcSpace.xl),
+          SectionLabel(signedIn ? 'Другой номер для связи, если нужно' : 'Телефон для связи, если хотите ответ'),
+          const SizedBox(height: HcSpace.s),
           TextFormField(
             controller: _phone,
             keyboardType: TextInputType.phone,
@@ -155,17 +157,21 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
           ),
           if (signedIn)
             Padding(
-              padding: const EdgeInsets.only(top: 8, left: 4),
+              padding: const EdgeInsets.only(top: HcSpace.s),
               child: Text(
                 'Мы увидим номер из вашего профиля и сможем ответить в приложении',
                 style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
               ),
             ),
-          const SizedBox(height: 28),
+          const SizedBox(height: HcSpace.xxl),
           FilledButton(
             onPressed: _sending ? null : _submit,
             child: _sending
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
                 : const Text('Отправить'),
           ),
         ],
@@ -184,8 +190,20 @@ class _PhotoPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (photo != null) {
+    return AnimatedSwitcher(
+      duration: Motion.of(context, Motion.medium),
+      transitionBuilder: (child, a) => FadeTransition(
+        opacity: a,
+        child: SizeTransition(sizeFactor: a, child: child),
+      ),
+      child: photo != null ? _preview() : _buttons(),
+    );
+  }
+
+  Widget _preview() {
+    {
       return Stack(
+        key: const ValueKey('preview'),
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(HcRadii.small),
@@ -197,13 +215,21 @@ class _PhotoPicker extends StatelessWidget {
             child: Material(
               color: Colors.white.withValues(alpha: 0.85),
               shape: const CircleBorder(),
-              child: IconButton(tooltip: 'Убрать фото', icon: const Icon(Icons.close_rounded, size: 18), onPressed: onRemove),
+              child: IconButton(
+                tooltip: 'Убрать фото',
+                icon: const Icon(Icons.close_rounded, size: 18),
+                onPressed: onRemove,
+              ),
             ),
           ),
         ],
       );
     }
+  }
+
+  Widget _buttons() {
     return Row(
+      key: const ValueKey('buttons'),
       children: [
         Expanded(
           child: OutlinedButton.icon(
@@ -212,7 +238,7 @@ class _PhotoPicker extends StatelessWidget {
             label: const Text('Камера'),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: HcSpace.m),
         Expanded(
           child: OutlinedButton.icon(
             onPressed: onGallery,
@@ -226,7 +252,7 @@ class _PhotoPicker extends StatelessWidget {
 }
 
 class _SentView extends StatelessWidget {
-  const _SentView({required this.type, required this.signedIn});
+  const _SentView({super.key, required this.type, required this.signedIn});
 
   final FeedbackType type;
   final bool signedIn;
@@ -235,19 +261,29 @@ class _SentView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(HcSpace.gutter),
         child: Glass(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          padding: const EdgeInsets.all(HcSpace.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const QuoteMark(size: 72),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.6, end: 1),
+                duration: Motion.of(context, Motion.slow),
+                curve: Curves.elasticOut,
+                builder: (_, v, child) => Transform.scale(scale: v, child: child),
+                child: IconTile(
+                  type == FeedbackType.thanks ? Icons.favorite_border_rounded : Icons.check_rounded,
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: HcSpace.l),
               Text(
                 type == FeedbackType.thanks ? 'Спасибо, это очень приятно!' : 'Спасибо, что рассказали',
                 textAlign: TextAlign.center,
-                style: HcType.serif(size: 28),
+                style: HcType.serif(size: 28, weight: 600),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: HcSpace.s),
               Text(
                 signedIn
                     ? 'Мы прочитаем обращение и ответим. Статус можно посмотреть в разделе «Мои обращения».'
@@ -255,7 +291,7 @@ class _SentView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: HcType.sans(color: HcColors.textSecondary),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: HcSpace.xl),
               if (signedIn)
                 SizedBox(
                   width: double.infinity,
@@ -264,7 +300,7 @@ class _SentView extends StatelessWidget {
                     child: const Text('Мои обращения'),
                   ),
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: HcSpace.s),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(onPressed: () => context.pop(), child: const Text('Готово')),

@@ -52,15 +52,15 @@ class FeedbackEntry {
   final DateTime? answeredAt;
 
   factory FeedbackEntry.fromJson(Map<String, dynamic> j) => FeedbackEntry(
-        id: j['id'] as String,
-        type: FeedbackType.fromCode(j['type'] as String),
-        message: j['message'] as String,
-        photoUrl: j['photoUrl'] as String?,
-        status: FeedbackStatus.fromCode(j['status'] as String),
-        reply: j['reply'] as String?,
-        createdAt: DateTime.parse(j['createdAt'] as String),
-        answeredAt: j['answeredAt'] == null ? null : DateTime.parse(j['answeredAt'] as String),
-      );
+    id: j['id'] as String,
+    type: FeedbackType.fromCode(j['type'] as String),
+    message: j['message'] as String,
+    photoUrl: j['photoUrl'] as String?,
+    status: FeedbackStatus.fromCode(j['status'] as String),
+    reply: j['reply'] as String?,
+    createdAt: DateTime.parse(j['createdAt'] as String),
+    answeredAt: j['answeredAt'] == null ? null : DateTime.parse(j['answeredAt'] as String),
+  );
 }
 
 class FeedbackRepository {

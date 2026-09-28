@@ -63,9 +63,12 @@ final _menu = MenuData.fromJson({
 });
 
 Widget _wrap(Widget child, List<Override> overrides) => ProviderScope(
-      overrides: overrides,
-      child: MaterialApp(theme: buildHcTheme(), home: Scaffold(body: child)),
-    );
+  overrides: overrides,
+  child: MaterialApp(
+    theme: buildHcTheme(),
+    home: Scaffold(body: child),
+  ),
+);
 
 class _SignedIn extends AuthController {
   @override
@@ -80,10 +83,10 @@ class _SignedOut extends AuthController {
 class _FakeSummary extends LoyaltySummaryController {
   @override
   Future<LoyaltySummary?> build() async => const LoyaltySummary(
-        card: LoyaltyCard(cardNumber: '7707 1234 5678', barcode: '770712345678'),
-        balance: 1250,
-        guestName: 'Мадина',
-      );
+    card: LoyaltyCard(cardNumber: '7707 1234 5678', barcode: '770712345678'),
+    balance: 1250,
+    guestName: 'Мадина',
+  );
 }
 
 void main() {
@@ -95,16 +98,16 @@ void main() {
 
     expect(find.text('Сырники'), findsOneWidget);
     expect(find.text('390 ₽'), findsOneWidget);
-    expect(find.text('ВЫБОР КОМАНДЫ'), findsOneWidget);
+    expect(find.text('Выбор команды'), findsOneWidget);
     expect(find.textContaining('информационный характер'), findsOneWidget);
 
-    await tester.tap(find.text('БАР'));
+    await tester.tap(find.text('Бар'));
     await tester.pumpAndSettle();
     expect(find.text('Капучино'), findsOneWidget);
     expect(find.text('270 / 290 ₽'), findsOneWidget);
     expect(find.text('Сырники'), findsNothing);
 
-    await tester.tap(find.text('КУХНЯ'));
+    await tester.tap(find.text('Кухня'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Сырники'));
     await tester.pumpAndSettle();
@@ -118,16 +121,30 @@ void main() {
   });
 
   testWidgets('бонусы: баланс с правильной формой слова и номер карты', (tester) async {
-    await tester.pumpWidget(_wrap(const LoyaltyScreen(), [
-      authControllerProvider.overrideWith(_SignedIn.new),
-      loyaltySummaryProvider.overrideWith(_FakeSummary.new),
-      loyaltyTransactionsProvider.overrideWith(
-        (ref) async => [
-          LoyaltyTransaction(id: 't1', date: DateTime.utc(2026, 9, 27, 9), amount: 27, kind: 'accrual', title: 'Начисление бонусов'),
-          LoyaltyTransaction(id: 't2', date: DateTime.utc(2026, 9, 26, 9), amount: -100, kind: 'redeem', title: 'Списание бонусов'),
-        ],
-      ),
-    ]));
+    await tester.pumpWidget(
+      _wrap(const LoyaltyScreen(), [
+        authControllerProvider.overrideWith(_SignedIn.new),
+        loyaltySummaryProvider.overrideWith(_FakeSummary.new),
+        loyaltyTransactionsProvider.overrideWith(
+          (ref) async => [
+            LoyaltyTransaction(
+              id: 't1',
+              date: DateTime.utc(2026, 9, 27, 9),
+              amount: 27,
+              kind: 'accrual',
+              title: 'Начисление бонусов',
+            ),
+            LoyaltyTransaction(
+              id: 't2',
+              date: DateTime.utc(2026, 9, 26, 9),
+              amount: -100,
+              kind: 'redeem',
+              title: 'Списание бонусов',
+            ),
+          ],
+        ),
+      ]),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('бонусов'), findsOneWidget);

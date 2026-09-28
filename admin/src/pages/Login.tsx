@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth-context'
 import { errorText } from '../format'
+import { Logo } from '../components/Monogram'
 
 export function Login() {
   const { login } = useAuth()
@@ -25,13 +26,8 @@ export function Login() {
   return (
     <div className="login-wrap">
       <form className="card login-card stack" onSubmit={submit}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="brand" style={{ fontSize: 32, padding: 0 }}>
-            HISTORY
-          </div>
-          <div className="caps" style={{ marginTop: 6 }}>
-            админка кофейни
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Logo size={48} />
         </div>
         <label className="field">
           <span className="caps">Email</span>

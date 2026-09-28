@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { api } from '../api'
-import { ErrorBox, ImageField, Loading, Modal } from '../components/ui'
+import { api, uploadImage } from '../api'
+import { ErrorBox, ImageField, Loading, Modal, Tabs } from '../components/ui'
 import { errorText } from '../format'
 import { BADGE_LABELS, type MenuBadge, type MenuCategory, type MenuItem, type MenuPrice, type MenuSection } from '../types'
 
@@ -57,12 +57,12 @@ export function Menu() {
           Разделов нет. Запустите <code>npm run db:seed</code> на backend, чтобы создать «Кухню» и «Бар».
         </div>
       ) : (
-        <div className="tabs" style={{ marginBottom: 20 }}>
-          {sections.map((s) => (
-            <button key={s.id} className={s.id === section?.id ? 'active' : ''} onClick={() => setSectionId(s.id)}>
-              {s.title}
-            </button>
-          ))}
+        <div style={{ marginBottom: 20 }}>
+          <Tabs
+            items={sections.map((s) => ({ value: s.id, label: s.title }))}
+            value={section?.id ?? ''}
+            onChange={setSectionId}
+          />
         </div>
       )}
 
@@ -104,7 +104,7 @@ export function Menu() {
                   {c.items.map((i, ii) => (
                     <tr key={i.id} style={{ opacity: i.available ? 1 : 0.5 }}>
                       <td style={{ width: 64 }}>
-                        {i.imageUrl ? <img src={i.imageUrl} alt="" className="thumb" /> : <div className="thumb" />}
+                        <ThumbUpload item={i} onUploaded={(url) => patchItem.mutate({ id: i.id, data: { imageUrl: url } })} />
                       </td>
                       <td>
                         <div style={{ fontWeight: 500 }}>{i.title}</div>
@@ -320,6 +320,10 @@ function ItemEditor({
   return (
     <Modal title={item ? 'Позиция меню' : 'Новая позиция'} onClose={onClose}>
       <form className="stack" onSubmit={submit}>
+        <div className="field">
+          <span className="caps">Фото блюда</span>
+          <ImageField value={form.imageUrl} onChange={(u) => set('imageUrl', u)} folder="menu" />
+        </div>
         <div className="grid grid-2" style={{ gap: 12 }}>
           <label className="field">
             <span className="caps">Название</span>
@@ -410,11 +414,6 @@ function ItemEditor({
           </label>
         )}
 
-        <div className="field">
-          <span className="caps">Фото</span>
-          <ImageField value={form.imageUrl} onChange={(u) => set('imageUrl', u)} folder="menu" />
-        </div>
-
         <label className="check">
           <input type="checkbox" checked={form.available} onChange={(e) => set('available', e.target.checked)} />
           Показывать в приложении
@@ -437,5 +436,40 @@ function ItemEditor({
         </div>
       </form>
     </Modal>
+  )
+}
+
+/** Миниатюра в таблице: клик — загрузить или заменить фото блюда сразу, без открытия формы. */
+function ThumbUpload({ item, onUploaded }: { item: MenuItem; onUploaded: (url: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const pick = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/jpeg,image/png,image/webp'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      setBusy(true)
+      try {
+        onUploaded(await uploadImage(file, 'menu'))
+      } catch (e) {
+        alert(errorText(e))
+      } finally {
+        setBusy(false)
+      }
+    }
+    input.click()
+  }
+  return (
+    <button
+      type="button"
+      className={`thumb-btn${item.imageUrl ? '' : ' empty'}`}
+      title={item.imageUrl ? 'Заменить фото' : 'Добавить фото'}
+      onClick={pick}
+      disabled={busy}
+    >
+      {item.imageUrl ? <img src={item.imageUrl} alt="" className="thumb" /> : <div className="thumb" />}
+      <span className="thumb-add">{busy ? '…' : item.imageUrl ? '↻' : '+'}</span>
+    </button>
   )
 }

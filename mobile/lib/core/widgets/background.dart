@@ -17,9 +17,7 @@ class HcBackground extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _BlobsPainter(intensity)),
-            ),
+            child: IgnorePointer(child: CustomPaint(painter: _BlobsPainter(intensity))),
           ),
           child,
         ],
@@ -38,7 +36,10 @@ class _BlobsPainter extends CustomPainter {
     void blob(Offset c, double r, Color color, double alpha) {
       final paint = Paint()
         ..shader = RadialGradient(
-          colors: [color.withValues(alpha: alpha * intensity), color.withValues(alpha: 0)],
+          colors: [
+            color.withValues(alpha: alpha * intensity),
+            color.withValues(alpha: 0),
+          ],
         ).createShader(Rect.fromCircle(center: c, radius: r));
       canvas.drawCircle(c, r, paint);
     }

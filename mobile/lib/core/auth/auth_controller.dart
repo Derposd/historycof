@@ -44,11 +44,9 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
   }
 
   Future<OtpRequestResult> requestOtp(String phone) async {
-    final json = await ref.read(apiClientProvider).post<Map<String, dynamic>>(
-          '/auth/otp/request',
-          data: {'phone': phone},
-          auth: false,
-        );
+    final json = await ref
+        .read(apiClientProvider)
+        .post<Map<String, dynamic>>('/auth/otp/request', data: {'phone': phone}, auth: false);
     return OtpRequestResult.fromJson(json);
   }
 
@@ -58,16 +56,18 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
     bool acceptPrivacyPolicy = false,
     String? name,
   }) async {
-    final json = await ref.read(apiClientProvider).post<Map<String, dynamic>>(
-      '/auth/otp/verify',
-      auth: false,
-      data: {
-        'phone': phone,
-        'code': code,
-        if (acceptPrivacyPolicy) 'acceptPrivacyPolicy': true,
-        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-      },
-    );
+    final json = await ref
+        .read(apiClientProvider)
+        .post<Map<String, dynamic>>(
+          '/auth/otp/verify',
+          auth: false,
+          data: {
+            'phone': phone,
+            'code': code,
+            if (acceptPrivacyPolicy) 'acceptPrivacyPolicy': true,
+            if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+          },
+        );
     await _tokens.save(Tokens(access: json['accessToken'] as String, refresh: json['refreshToken'] as String));
     final profile = GuestProfile.fromJson(json['guest'] as Map<String, dynamic>);
     await _tokens.writeProfileCache(jsonEncode(profile.toJson()));
@@ -81,11 +81,12 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
   }
 
   Future<void> updateProfile({String? name, bool? pushNewsEnabled, String? birthday}) async {
-    final json = await ref.read(apiClientProvider).patch<Map<String, dynamic>>('/me', data: {
-      'name': ?name,
-      'pushNewsEnabled': ?pushNewsEnabled,
-      'birthday': ?birthday,
-    });
+    final json = await ref
+        .read(apiClientProvider)
+        .patch<Map<String, dynamic>>(
+          '/me',
+          data: {'name': ?name, 'pushNewsEnabled': ?pushNewsEnabled, 'birthday': ?birthday},
+        );
     final profile = GuestProfile.fromJson(json);
     await _tokens.writeProfileCache(jsonEncode(profile.toJson()));
     state = AsyncData(profile);
@@ -101,7 +102,10 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
     if (refresh != null) {
       // Отзываем refresh-токен на сервере, но не ждём сеть для выхода.
       unawaited(
-        ref.read(apiClientProvider).post<void>('/auth/logout', data: {'refreshToken': refresh}, auth: false).catchError((_) {}),
+        ref
+            .read(apiClientProvider)
+            .post<void>('/auth/logout', data: {'refreshToken': refresh}, auth: false)
+            .catchError((_) {}),
       );
     }
     await _tokens.clear();

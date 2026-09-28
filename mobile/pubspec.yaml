@@ -65,6 +65,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    # Тексты лицензий шрифтов (SIL OFL 1.1) — показываются в «Профиль → Лицензии»
+    - assets/fonts/OFL-CormorantGaramond.txt
+    - assets/fonts/OFL-GolosText.txt
+    # Демо-фото для демо-версии (сгенерированы, без чужих прав)
+    - assets/demo/
+
   fonts:
     # Заголовки и словесный знак — элегантный сериф с полной кириллицей
     - family: Cormorant

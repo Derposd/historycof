@@ -8,10 +8,13 @@ import '../../core/auth/guest_profile.dart';
 import '../../core/config.dart';
 import '../../core/push/push_service.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/logo.dart';
+import '../../core/widgets/motion.dart';
 import '../contacts/contacts_providers.dart';
 import '../contacts/venue.dart';
 
@@ -22,57 +25,100 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authControllerProvider).value;
     final venue = ref.watch(venueProvider).value ?? Venue.fallback;
+    const h = EdgeInsets.symmetric(horizontal: HcSpace.gutter);
 
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 110),
+        padding: EdgeInsets.only(bottom: HcSpace.navInset(context)),
         children: [
-          const ScreenTitle('Профиль', overline: 'History Coffee'),
+          const ScreenTitle('Профиль'),
           if (AppConfig.demo)
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+              padding: const EdgeInsets.fromLTRB(HcSpace.gutter, 0, HcSpace.gutter, HcSpace.listGap),
               child: SoftCard(
-                child: Text(
-                  'Демо-версия: сервер кофейни ещё не подключён, данные примерные и не сохраняются.',
-                  style: HcType.sans(size: 13.5, color: HcColors.textSecondary),
+                padding: const EdgeInsets.all(HcSpace.l),
+                child: Row(
+                  children: [
+                    const Icon(Icons.science_outlined, size: 20, color: HcColors.textSecondary),
+                    const SizedBox(width: HcSpace.m),
+                    Expanded(
+                      child: Text(
+                        'Демо-версия: сервер кофейни ещё не подключён, данные примерные и не сохраняются.',
+                        style: HcType.sans(size: 13, color: HcColors.textSecondary),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: profile == null ? _SignInCard() : _ProfileCard(profile: profile),
+            padding: h,
+            child: AnimatedSwitcher(
+              duration: Motion.of(context, Motion.medium),
+              child: profile == null
+                  ? const _SignInCard(key: ValueKey('signin'))
+                  : _ProfileCard(key: ValueKey(profile.id), profile: profile),
+            ),
           ),
-          const SizedBox(height: 22),
-          const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('Обратная связь')),
-          const SizedBox(height: 8),
-          _Group(children: [
-            _Row(icon: Icons.edit_note_rounded, title: 'Написать нам', subtitle: 'Жалоба, предложение, благодарность', onTap: () => context.push('/feedback/new')),
-            if (profile != null)
-              _Row(icon: Icons.mark_email_read_outlined, title: 'Мои обращения', onTap: () => context.push('/feedback/mine')),
-          ]),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('Обратная связь')),
+          const SizedBox(height: HcSpace.s),
+          _Group(
+            children: [
+              _Row(
+                icon: Icons.edit_note_rounded,
+                title: 'Написать нам',
+                subtitle: 'Жалоба, идея или спасибо',
+                onTap: () => context.push('/feedback/new'),
+              ),
+              if (profile != null)
+                _Row(
+                  icon: Icons.mark_email_read_outlined,
+                  title: 'Мои обращения',
+                  onTap: () => context.push('/feedback/mine'),
+                ),
+            ],
+          ),
           if (profile != null) ...[
-            const SizedBox(height: 22),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('Уведомления')),
-            const SizedBox(height: 8),
+            const SizedBox(height: HcSpace.section),
+            const Padding(padding: h, child: SectionLabel('Уведомления')),
+            const SizedBox(height: HcSpace.s),
             _Group(children: [_PushToggle(profile: profile)]),
           ],
-          const SizedBox(height: 22),
-          const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('О приложении')),
-          const SizedBox(height: 8),
-          _Group(children: [
-            _Row(icon: Icons.shield_outlined, title: 'Политика конфиденциальности', onTap: () => context.push('/privacy')),
-            if (profile != null) ...[
-              _Row(icon: Icons.logout_rounded, title: 'Выйти', onTap: () => _confirmLogout(context, ref)),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('О приложении')),
+          const SizedBox(height: HcSpace.s),
+          _Group(
+            children: [
               _Row(
-                icon: Icons.delete_outline_rounded,
-                title: 'Удалить аккаунт',
-                color: HcColors.terracotta,
-                onTap: () => _confirmDelete(context, ref),
+                icon: Icons.shield_outlined,
+                title: 'Политика конфиденциальности',
+                onTap: () => context.push('/privacy'),
               ),
+              _Row(
+                icon: Icons.article_outlined,
+                title: 'Лицензии',
+                subtitle: 'Шрифты и открытые библиотеки',
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'History Coffee',
+                  applicationLegalese: venue.legalName,
+                  applicationIcon: const Padding(padding: EdgeInsets.all(HcSpace.s), child: HcMonogram(size: 48)),
+                ),
+              ),
+              if (profile != null) ...[
+                _Row(icon: Icons.logout_rounded, title: 'Выйти', onTap: () => _confirmLogout(context, ref)),
+                _Row(
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Удалить аккаунт',
+                  color: HcColors.terracotta,
+                  onTap: () => _confirmDelete(context, ref),
+                ),
+              ],
             ],
-          ]),
-          const SizedBox(height: 28),
+          ),
+          const SizedBox(height: HcSpace.section),
           Center(
             child: Text(
               '${venue.legalName}\n${venue.address}',
@@ -133,21 +179,28 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _SignInCard extends StatelessWidget {
+  const _SignInCard({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Glass(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(HcSpace.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Мы помним ваши имена', style: HcType.serif(size: 26)),
-          const SizedBox(height: 6),
+          const IconTile(Icons.person_outline_rounded, size: 56),
+          const SizedBox(height: HcSpace.l),
+          Text('Войдите по номеру', style: HcType.serif(size: 28, weight: 600)),
+          const SizedBox(height: HcSpace.s),
           Text(
-            'И любимые сиропы, и все «мне как обычно». Войдите, чтобы копить бонусы и получать ответы на обращения.',
+            'Бонусная карта, история операций и ответы на ваши обращения — в одном месте.',
             style: HcType.sans(color: HcColors.textSecondary),
           ),
-          const SizedBox(height: 18),
-          SizedBox(width: double.infinity, child: FilledButton(onPressed: () => context.push('/login'), child: const Text('Войти по номеру'))),
+          const SizedBox(height: HcSpace.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: () => context.push('/login'), child: const Text('Войти')),
+          ),
         ],
       ),
     );
@@ -155,14 +208,15 @@ class _SignInCard extends StatelessWidget {
 }
 
 class _ProfileCard extends ConsumerWidget {
-  const _ProfileCard({required this.profile});
+  const _ProfileCard({super.key, required this.profile});
 
   final GuestProfile profile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasName = profile.name?.isNotEmpty ?? false;
     return Glass(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(HcSpace.card),
       onTap: () => _editName(context, ref),
       child: Row(
         children: [
@@ -170,18 +224,21 @@ class _ProfileCard extends ConsumerWidget {
             width: 56,
             height: 56,
             alignment: Alignment.center,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: HcColors.accent.withValues(alpha: 0.15)),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: HcColors.accent.withValues(alpha: 0.15),
+            ),
             child: Text(
-              (profile.name?.isNotEmpty ?? false) ? profile.name!.characters.first.toUpperCase() : 'H',
+              hasName ? profile.name!.characters.first.toUpperCase() : 'H',
               style: HcType.serif(size: 28, weight: 600, color: HcColors.accentDark),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: HcSpace.l),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(profile.name?.isNotEmpty == true ? profile.name! : 'Гость History', style: HcType.serif(size: 24, weight: 600)),
+                Text(hasName ? profile.name! : 'Гость', style: HcType.serif(size: 24, weight: 600)),
                 const SizedBox(height: 2),
                 Text(formatPhone(profile.phone), style: HcType.sans(color: HcColors.textSecondary)),
               ],
@@ -230,23 +287,39 @@ class _PushToggle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final push = ref.watch(pushServiceProvider);
-    return SwitchListTile(
-      value: profile.pushNewsEnabled && push.enabled,
-      onChanged: push.enabled
-          ? (v) async {
-              try {
-                await ref.read(authControllerProvider.notifier).updateProfile(pushNewsEnabled: v);
-                await push.setNewsSubscription(v);
-              } catch (e) {
-                if (context.mounted) showHcSnack(context, ApiException.messageOf(e));
-              }
-            }
-          : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18),
-      title: Text('Новости кофейни', style: HcType.sans(size: 15.5, weight: 500)),
-      subtitle: Text(
-        push.enabled ? 'Новые десерты, события, акции' : 'Push-уведомления не настроены в этой сборке',
-        style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: HcSpace.l, vertical: HcSpace.m),
+      child: Row(
+        children: [
+          const IconTile(Icons.notifications_none_rounded, size: 40),
+          const SizedBox(width: HcSpace.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Новости кофейни', style: HcType.sans(size: 15.5, weight: 500)),
+                Text(
+                  push.enabled ? 'Новинки, события, акции' : 'Уведомления не настроены в этой сборке',
+                  style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: profile.pushNewsEnabled && push.enabled,
+            onChanged: push.enabled
+                ? (v) async {
+                    selectionHaptic();
+                    try {
+                      await ref.read(authControllerProvider.notifier).updateProfile(pushNewsEnabled: v);
+                      await push.setNewsSubscription(v);
+                    } catch (e) {
+                      if (context.mounted) showHcSnack(context, ApiException.messageOf(e));
+                    }
+                  }
+                : null,
+          ),
+        ],
       ),
     );
   }
@@ -260,13 +333,13 @@ class _Group extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
       child: SoftCard(
         padding: EdgeInsets.zero,
         child: Column(
           children: [
             for (final (i, c) in children.indexed) ...[
-              if (i > 0) const Hairline(indent: 18),
+              if (i > 0) const Divider(indent: HcSpace.l + 40 + HcSpace.m, endIndent: HcSpace.l),
               c,
             ],
           ],
@@ -287,13 +360,32 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
-      leading: Icon(icon, color: color == HcColors.text ? HcColors.accentDark : color),
-      title: Text(title, style: HcType.sans(size: 15.5, weight: 500, color: color)),
-      subtitle: subtitle == null ? null : Text(subtitle!, style: HcType.sans(size: 12.5, color: HcColors.textSecondary)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: HcColors.textSecondary),
+    return Semantics(
+      button: true,
+      child: Pressable(
+        onTap: onTap,
+        scale: 0.985,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: HcSpace.l, vertical: HcSpace.m),
+          child: Row(
+            children: [
+              IconTile(icon, size: 40, color: color == HcColors.text ? HcColors.accentDark : color),
+              const SizedBox(width: HcSpace.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: HcType.sans(size: 15.5, weight: 500, color: color)),
+                    if (subtitle != null)
+                      Text(subtitle!, style: HcType.sans(size: 12.5, color: HcColors.textSecondary)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: HcColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

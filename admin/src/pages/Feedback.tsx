@@ -163,8 +163,7 @@ function FeedbackDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <StatusPill status={f.status} />
             <span className="muted small">{formatDate(f.createdAt)}</span>
           </div>
-          <div className="quote">“</div>
-          <div style={{ whiteSpace: 'pre-line', fontSize: 16 }}>{f.message}</div>
+          <div className="note">{f.message}</div>
           {f.photoUrl && (
             <a href={f.photoUrl} target="_blank" rel="noreferrer">
               <img src={f.photoUrl} alt="Фото к обращению" className="cover" />

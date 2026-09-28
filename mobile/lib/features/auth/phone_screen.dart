@@ -9,7 +9,9 @@ import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/background.dart';
 import '../../core/widgets/common.dart';
-import '../../core/widgets/wordmark.dart';
+import '../../core/theme/theme.dart';
+import '../../core/widgets/logo.dart';
+import '../../core/widgets/motion.dart';
 
 /// Шаг 1 входа: номер телефона.
 class PhoneScreen extends ConsumerStatefulWidget {
@@ -70,19 +72,19 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
         intensity: 0.8,
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+            padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.xxl, HcSpace.gutter, HcSpace.xl),
             children: [
-              const Center(child: HistoryWordmark(size: 30)),
-              const SizedBox(height: 36),
-              Text('Вход', style: HcType.serif(size: 38, weight: 500)),
-              const SizedBox(height: 8),
+              const FadeSlideIn(child: HcLogo(size: 44)),
+              const SizedBox(height: HcSpace.xxl),
+              Text('Вход', style: HcType.serif(size: 38, weight: 600)),
+              const SizedBox(height: HcSpace.s),
               Text(
-                'Номер телефона — это ваша бонусная карта. Пришлём SMS с кодом.',
+                'Номер телефона станет вашей бонусной картой. Пришлём SMS с кодом.',
                 style: HcType.sans(color: HcColors.textSecondary),
               ),
-              const SizedBox(height: 28),
-              const CapsLabel('Телефон'),
-              const SizedBox(height: 10),
+              const SizedBox(height: HcSpace.xl),
+              const SectionLabel('Телефон'),
+              const SizedBox(height: HcSpace.s),
               TextField(
                 controller: _phone,
                 autofocus: true,
@@ -95,11 +97,15 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
                 onChanged: (_) => setState(() => _error = null),
                 onSubmitted: (_) => _submit(),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: HcSpace.xl),
               FilledButton(
                 onPressed: _valid && !_loading ? _submit : null,
                 child: _loading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
                     : const Text('Получить код'),
               ),
             ],

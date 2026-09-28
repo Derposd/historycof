@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,9 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/background.dart';
+import '../../core/theme/theme.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/motion.dart';
 import 'phone_screen.dart';
 
 const _codeLength = 4;
@@ -29,7 +32,9 @@ class CodeScreen extends ConsumerStatefulWidget {
   ConsumerState<CodeScreen> createState() => _CodeScreenState();
 }
 
-class _CodeScreenState extends ConsumerState<CodeScreen> {
+class _CodeScreenState extends ConsumerState<CodeScreen> with SingleTickerProviderStateMixin {
+  /// Короткое «покачивание» поля при неверном коде.
+  late final AnimationController _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
   final _code = TextEditingController();
   final _name = TextEditingController();
   late int _resendIn = widget.args.resendInSec;
@@ -57,6 +62,7 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _shake.dispose();
     _code.dispose();
     _name.dispose();
     super.dispose();
@@ -71,7 +77,9 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
       _error = null;
     });
     try {
-      await ref.read(authControllerProvider.notifier).verifyOtp(
+      await ref
+          .read(authControllerProvider.notifier)
+          .verifyOtp(
             phone: widget.args.phone,
             code: _code.text,
             acceptPrivacyPolicy: _needsConsent && _consent,
@@ -87,6 +95,8 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
         _error = e.message;
         if (e.code != 'consent_required') _code.clear();
       });
+      if (!Motion.reduced(context)) unawaited(_shake.forward(from: 0));
+      unawaited(HapticFeedback.mediumImpact());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -115,42 +125,59 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
         intensity: 0.8,
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.xxl, HcSpace.gutter, HcSpace.xl),
             children: [
-              Text('Код из SMS', style: HcType.serif(size: 38, weight: 500)),
-              const SizedBox(height: 8),
+              Text('Код из SMS', style: HcType.serif(size: 38, weight: 600)),
+              const SizedBox(height: HcSpace.s),
               Text(
                 AppConfig.demo
                     ? 'Демо-версия: SMS не отправляется, введите ${DemoInterceptor.demoCode}'
                     : 'Отправили на ${formatPhone(widget.args.phone)}',
                 style: HcType.sans(color: HcColors.textSecondary),
               ),
-              const SizedBox(height: 28),
-              TextField(
-                controller: _code,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: _codeLength,
-                autofillHints: const [AutofillHints.oneTimeCode],
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: HcType.serif(size: 40, weight: 500, letterSpacing: 18),
-                decoration: InputDecoration(counterText: '', hintText: '• • • •', errorText: _error, errorMaxLines: 3),
-                onChanged: (v) {
-                  setState(() => _error = null);
-                  if (v.length == _codeLength) _submit();
+              const SizedBox(height: HcSpace.xl),
+              AnimatedBuilder(
+                animation: _shake,
+                builder: (context, child) {
+                  final t = _shake.value;
+                  // затухающая синусоида: 3 качания, амплитуда 10px
+                  final dx = t == 0 ? 0.0 : 10 * (1 - t) * math.sin(t * math.pi * 6);
+                  return Transform.translate(offset: Offset(dx, 0), child: child);
                 },
+                child: TextField(
+                  controller: _code,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: _codeLength,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: HcType.serif(size: 40, weight: 500, letterSpacing: 18),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '• • • •',
+                    errorText: _error,
+                    errorMaxLines: 3,
+                  ),
+                  onChanged: (v) {
+                    setState(() => _error = null);
+                    if (v.length == _codeLength) _submit();
+                  },
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: HcSpace.s),
               Center(
                 child: _resendIn > 0
-                    ? Text('Отправить снова через $_resendIn с', style: HcType.sans(size: 13.5, color: HcColors.textSecondary))
+                    ? Text(
+                        'Отправить снова через $_resendIn с',
+                        style: HcType.sans(size: 13.5, color: HcColors.textSecondary),
+                      )
                     : TextButton(onPressed: _resend, child: const Text('Отправить код снова')),
               ),
               if (widget.args.isNewUser == true) ...[
-                const SizedBox(height: 20),
-                const CapsLabel('Как к вам обращаться (необязательно)'),
-                const SizedBox(height: 10),
+                const SizedBox(height: HcSpace.l),
+                const SectionLabel('Как к вам обращаться, если хотите'),
+                const SizedBox(height: HcSpace.s),
                 TextField(
                   controller: _name,
                   textCapitalization: TextCapitalization.words,
@@ -160,14 +187,18 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
                 ),
               ],
               if (_needsConsent) ...[
-                const SizedBox(height: 18),
+                const SizedBox(height: HcSpace.l),
                 _ConsentCheckbox(value: _consent, onChanged: (v) => setState(() => _consent = v)),
               ],
-              const SizedBox(height: 22),
+              const SizedBox(height: HcSpace.xl),
               FilledButton(
                 onPressed: _canSubmit ? _submit : null,
                 child: _loading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
                     : const Text('Войти'),
               ),
             ],

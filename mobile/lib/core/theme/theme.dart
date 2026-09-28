@@ -4,6 +4,32 @@ import 'package:flutter/services.dart';
 import 'colors.dart';
 import 'typography.dart';
 
+/// Сетка отступов: всё кратно 4, базовый шаг — 8.
+/// [gutter] — единое боковое поле всех экранов: по нему выровнены заголовки,
+/// подписи разделов и края карточек.
+abstract final class HcSpace {
+  static const xs = 4.0;
+  static const s = 8.0;
+  static const m = 12.0;
+  static const l = 16.0;
+  static const xl = 24.0;
+  static const xxl = 32.0;
+
+  static const gutter = 20.0;
+
+  /// Внутренний отступ карточек.
+  static const card = 20.0;
+
+  /// Между карточками в списке.
+  static const listGap = 12.0;
+
+  /// Между смысловыми блоками экрана.
+  static const section = 28.0;
+
+  /// Запас снизу под плавающую навигацию.
+  static double navInset(BuildContext context) => MediaQuery.paddingOf(context).bottom + 104;
+}
+
 abstract final class HcRadii {
   static const card = 20.0;
   static const small = 14.0;
@@ -40,7 +66,10 @@ ThemeData buildHcTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: HcColors.background,
     fontFamily: HcType.sansFamily,
-    splashFactory: InkSparkle.splashFactory,
+    // Мягкая «волна» вместо искрящегося эффекта — спокойнее и дешевле по производительности.
+    splashFactory: InkRipple.splashFactory,
+    splashColor: HcColors.accent.withValues(alpha: 0.10),
+    highlightColor: Colors.transparent,
   );
 
   final textTheme = base.textTheme.copyWith(
@@ -141,7 +170,9 @@ ThemeData buildHcTheme() {
       trackOutlineColor: const WidgetStatePropertyAll(HcColors.hairline),
     ),
     checkboxTheme: CheckboxThemeData(
-      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? HcColors.accent : Colors.transparent),
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? HcColors.accent : Colors.transparent,
+      ),
       side: const BorderSide(color: HcColors.textSecondary, width: 1.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
     ),

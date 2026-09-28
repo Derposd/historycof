@@ -24,10 +24,10 @@ class LoyaltySummary {
   final String? guestName;
 
   factory LoyaltySummary.fromJson(Map<String, dynamic> j) => LoyaltySummary(
-        card: LoyaltyCard.fromJson(j['card'] as Map<String, dynamic>),
-        balance: j['balance'] as num,
-        guestName: j['guestName'] as String?,
-      );
+    card: LoyaltyCard.fromJson(j['card'] as Map<String, dynamic>),
+    balance: j['balance'] as num,
+    guestName: j['guestName'] as String?,
+  );
 }
 
 class LoyaltyTransaction {
@@ -50,18 +50,19 @@ class LoyaltyTransaction {
   final String? orderNumber;
 
   factory LoyaltyTransaction.fromJson(Map<String, dynamic> j) => LoyaltyTransaction(
-        id: j['id'] as String,
-        date: DateTime.parse(j['date'] as String),
-        amount: j['amount'] as num,
-        kind: j['kind'] as String? ?? 'other',
-        title: j['title'] as String? ?? 'Операция',
-        orderNumber: j['orderNumber'] as String?,
-      );
+    id: j['id'] as String,
+    date: DateTime.parse(j['date'] as String),
+    amount: j['amount'] as num,
+    kind: j['kind'] as String? ?? 'other',
+    title: j['title'] as String? ?? 'Операция',
+    orderNumber: j['orderNumber'] as String?,
+  );
 }
 
 /// Баланс и карта. Пересоздаётся при входе/выходе.
-final loyaltySummaryProvider =
-    AsyncNotifierProvider.autoDispose<LoyaltySummaryController, LoyaltySummary?>(LoyaltySummaryController.new);
+final loyaltySummaryProvider = AsyncNotifierProvider.autoDispose<LoyaltySummaryController, LoyaltySummary?>(
+  LoyaltySummaryController.new,
+);
 
 class LoyaltySummaryController extends AsyncNotifier<LoyaltySummary?> {
   @override
@@ -72,10 +73,9 @@ class LoyaltySummaryController extends AsyncNotifier<LoyaltySummary?> {
 
   Future<LoyaltySummary?> _load({required bool fresh}) async {
     if (!ref.read(isSignedInProvider)) return null;
-    final json = await ref.read(apiClientProvider).get<Map<String, dynamic>>(
-          '/loyalty',
-          query: fresh ? {'refresh': 'true'} : null,
-        );
+    final json = await ref
+        .read(apiClientProvider)
+        .get<Map<String, dynamic>>('/loyalty', query: fresh ? {'refresh': 'true'} : null);
     return LoyaltySummary.fromJson(json);
   }
 
@@ -88,9 +88,8 @@ class LoyaltySummaryController extends AsyncNotifier<LoyaltySummary?> {
 final loyaltyTransactionsProvider = FutureProvider.autoDispose<List<LoyaltyTransaction>>((ref) async {
   final signedIn = ref.watch(isSignedInProvider);
   if (!signedIn) return const [];
-  final json = await ref.watch(apiClientProvider).get<Map<String, dynamic>>(
-    '/loyalty/transactions',
-    query: {'pageSize': 30},
-  );
+  final json = await ref
+      .watch(apiClientProvider)
+      .get<Map<String, dynamic>>('/loyalty/transactions', query: {'pageSize': 30});
   return (json['items'] as List<dynamic>).map((e) => LoyaltyTransaction.fromJson(e as Map<String, dynamic>)).toList();
 });

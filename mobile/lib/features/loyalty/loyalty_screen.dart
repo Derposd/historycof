@@ -10,7 +10,8 @@ import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
-import '../../core/widgets/wordmark.dart';
+import '../../core/widgets/logo.dart';
+import '../../core/widgets/motion.dart';
 import 'loyalty.dart';
 
 class LoyaltyScreen extends ConsumerWidget {
@@ -19,18 +20,17 @@ class LoyaltyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signedIn = ref.watch(isSignedInProvider);
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 110;
 
     if (!signedIn) {
       return SafeArea(
         bottom: false,
         child: ListView(
-          padding: EdgeInsets.only(bottom: bottomInset),
+          padding: EdgeInsets.only(bottom: HcSpace.navInset(context)),
           children: [
-            const ScreenTitle('Бонусы', overline: 'Карта гостя'),
+            const ScreenTitle('Бонусы'),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: _GuestInvite(onLogin: () => context.push('/login')),
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: FadeSlideIn(child: _GuestInvite(onLogin: () => context.push('/login'))),
             ),
           ],
         ),
@@ -50,56 +50,102 @@ class LoyaltyScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-          padding: EdgeInsets.only(bottom: bottomInset),
+          padding: EdgeInsets.only(bottom: HcSpace.navInset(context)),
           children: [
-            const ScreenTitle('Бонусы', overline: 'Карта гостя'),
+            const ScreenTitle('Бонусы'),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: switch (summary) {
-                AsyncData(:final value?) => LoyaltyCardView(summary: value),
-                AsyncError(:final error) => Glass(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: AnimatedSwitcher(
+                duration: Motion.of(context, Motion.slow),
+                switchInCurve: Motion.emphasized,
+                transitionBuilder: (child, a) => FadeTransition(
+                  opacity: a,
+                  child: ScaleTransition(scale: Tween(begin: 0.97, end: 1.0).animate(a), child: child),
+                ),
+                child: switch (summary) {
+                  AsyncData(:final value?) => LoyaltyCardView(key: const ValueKey('card'), summary: value),
+                  AsyncError(:final error) => Glass(
+                    key: const ValueKey('error'),
+                    padding: const EdgeInsets.symmetric(vertical: HcSpace.m),
                     child: ErrorState(error: error, onRetry: () => ref.invalidate(loyaltySummaryProvider)),
                   ),
-                _ => const _CardSkeleton(),
-              },
-            ),
-            const SizedBox(height: 14),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                'Покажите код бариста перед оплатой — бонусы начислятся или спишутся на кассе',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: HcColors.textSecondary, height: 1.4),
+                  _ => const _CardSkeleton(key: ValueKey('skeleton')),
+                },
               ),
             ),
-            const SizedBox(height: 28),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 22), child: CapsLabel('История')),
-            const SizedBox(height: 8),
-            ...switch (history) {
-              AsyncData(:final value) when value.isEmpty => [
-                  Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: Text('Операций пока нет', style: HcType.sans(color: HcColors.textSecondary)),
+            const SizedBox(height: HcSpace.l),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 18, color: HcColors.textSecondary),
+                  const SizedBox(width: HcSpace.s),
+                  Expanded(
+                    child: Text(
+                      'Покажите код бариста перед оплатой — бонусы начислятся или спишутся на кассе.',
+                      style: HcType.sans(size: 13, color: HcColors.textSecondary, height: 1.4),
+                    ),
                   ),
                 ],
-              AsyncData(:final value) => [for (final t in value) _TransactionTile(t)],
-              AsyncError() => [
-                  Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: Text('Не удалось загрузить историю', style: HcType.sans(color: HcColors.textSecondary)),
-                  ),
-                ],
-              _ => [
-                  for (var i = 0; i < 3; i++)
-                    const Padding(padding: EdgeInsets.fromLTRB(22, 12, 22, 12), child: SkeletonBox(height: 20)),
-                ],
-            },
+              ),
+            ),
+            const SizedBox(height: HcSpace.section),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: SectionLabel('История операций'),
+            ),
+            const SizedBox(height: HcSpace.s),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: HcSpace.gutter),
+              child: SoftCard(
+                padding: EdgeInsets.zero,
+                child: AnimatedSize(
+                  duration: Motion.of(context, Motion.medium),
+                  curve: Motion.curve,
+                  alignment: Alignment.topCenter,
+                  child: switch (history) {
+                    AsyncData(:final value) when value.isEmpty => const _HistoryNote('Операций пока нет'),
+                    AsyncData(:final value) => Column(
+                      children: [
+                        for (final (i, t) in value.indexed) ...[
+                          if (i > 0) const Hairline(indent: HcSpace.l),
+                          FadeSlideIn(index: i, offset: 8, child: _TransactionTile(t)),
+                        ],
+                      ],
+                    ),
+                    AsyncError() => const _HistoryNote('Не удалось загрузить историю'),
+                    _ => const Padding(
+                      padding: EdgeInsets.all(HcSpace.l),
+                      child: Column(
+                        children: [
+                          SkeletonBox(height: 20),
+                          SizedBox(height: HcSpace.m),
+                          SkeletonBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _HistoryNote extends StatelessWidget {
+  const _HistoryNote(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(HcSpace.card),
+    child: Text(text, style: HcType.sans(color: HcColors.textSecondary)),
+  );
 }
 
 /// Карта лояльности: стекло поверх размытого тёплого градиента.
@@ -108,149 +154,188 @@ class LoyaltyCardView extends StatelessWidget {
 
   final LoyaltySummary summary;
 
+  static const _radius = HcRadii.card + 4;
+
   @override
   Widget build(BuildContext context) {
     // Обрезаем по скруглению, чтобы цветные пятна не выходили за углы карты.
     return ClipRRect(
-      borderRadius: BorderRadius.circular(HcRadii.card + 4),
-      child: _content(context),
-    );
-  }
-
-  Widget _content(BuildContext context) {
-    return Stack(
-      children: [
-        // Цветная подложка, которую размывает стекло карты.
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(HcRadii.card + 4),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFB9C29F), Color(0xFFE9D7A6), Color(0xFFDDB39C)],
+      borderRadius: BorderRadius.circular(_radius),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_radius),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFC3CBAA), Color(0xFFEBDDB4), Color(0xFFE2BFA9)],
+                ),
               ),
             ),
           ),
-        ),
-        Positioned(right: -30, top: -40, child: _blob(160, HcColors.gold)),
-        Positioned(left: -40, bottom: -30, child: _blob(180, HcColors.accentDark.withValues(alpha: 0.6))),
-        Glass(
-          radius: HcRadii.card + 4,
-          blur: 26,
-          fill: const Color(0x8CFFFFFF),
-          padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const HistoryWordmark(size: 18),
-                  const Spacer(),
-                  if (summary.guestName != null) CapsLabel(summary.guestName!, color: HcColors.text),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Semantics(
-                label: 'Баланс ${summary.balance} ${pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов')}',
-                excludeSemantics: true,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+          Positioned(right: -30, top: -40, child: _blob(170, HcColors.gold)),
+          Positioned(left: -50, bottom: -40, child: _blob(190, HcColors.accentDark.withValues(alpha: 0.5))),
+          Glass(
+            radius: _radius,
+            blur: 26,
+            fill: const Color(0x8CFFFFFF),
+            padding: const EdgeInsets.all(HcSpace.card),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(formatNumber(summary.balance), style: HcType.serif(size: 58, weight: 500, height: 1)),
-                    const SizedBox(width: 10),
-                    Text(
-                      pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов'),
-                      style: HcType.serif(size: 22, weight: 400, italic: true, color: HcColors.text),
-                    ),
+                    const HcLogo(size: 30, showSubtitle: false),
+                    const Spacer(),
+                    if (summary.guestName != null && summary.guestName!.isNotEmpty)
+                      SectionLabel(summary.guestName!, color: HcColors.text),
                   ],
                 ),
-              ),
-              const SizedBox(height: 18),
-              GestureDetector(
-                onTap: () => _showFullscreenCode(context, summary.card),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(HcRadii.small)),
-                  child: Row(
-                    children: [
-                      Semantics(
-                        label: 'QR-код карты для сканирования на кассе',
-                        child: BarcodeWidget(
-                          barcode: Barcode.qrCode(errorCorrectLevel: BarcodeQRCorrectionLevel.medium),
-                          data: summary.card.barcode,
-                          width: 116,
-                          height: 116,
-                          color: HcColors.text,
+                const SizedBox(height: HcSpace.xl),
+                const SectionLabel('Баланс', color: HcColors.text),
+                Semantics(
+                  label: 'Баланс ${summary.balance} ${pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов')}',
+                  excludeSemantics: true,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: summary.balance.toDouble()),
+                    duration: Motion.of(context, const Duration(milliseconds: 900)),
+                    curve: Motion.curve,
+                    builder: (context, v, _) => Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(formatNumber(v.round()), style: HcType.serif(size: 56, weight: 600, height: 1.05)),
+                        const SizedBox(width: HcSpace.s),
+                        Text(
+                          pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов'),
+                          style: HcType.sans(size: 16, weight: 500, color: HcColors.text),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CapsLabel('Номер карты', size: 10),
-                            const SizedBox(height: 6),
-                            Text(summary.card.cardNumber, style: HcType.sans(size: 17, weight: 500, letterSpacing: 1.2)),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                const Icon(Icons.open_in_full_rounded, size: 14, color: HcColors.accentDark),
-                                const SizedBox(width: 6),
-                                Text('Показать крупно', style: HcType.sans(size: 13, color: HcColors.accentDark, weight: 500)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: HcSpace.l),
+                Pressable(
+                  onTap: () => _showFullscreenCode(context, summary.card),
+                  child: Container(
+                    padding: const EdgeInsets.all(HcSpace.l),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(HcRadii.small)),
+                    child: Row(
+                      children: [
+                        Hero(
+                          tag: 'loyalty-qr',
+                          child: Semantics(
+                            label: 'QR-код карты для сканирования на кассе',
+                            child: BarcodeWidget(
+                              barcode: Barcode.qrCode(errorCorrectLevel: BarcodeQRCorrectionLevel.medium),
+                              data: summary.card.barcode,
+                              width: 112,
+                              height: 112,
+                              color: HcColors.text,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: HcSpace.l),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SectionLabel('Номер карты', size: 12),
+                              const SizedBox(height: HcSpace.xs),
+                              Text(
+                                summary.card.cardNumber,
+                                style: HcType.sans(size: 17, weight: 600, letterSpacing: 0.8),
+                              ),
+                              const SizedBox(height: HcSpace.m),
+                              Row(
+                                children: [
+                                  const Icon(Icons.open_in_full_rounded, size: 14, color: HcColors.accentDark),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Показать крупно',
+                                    style: HcType.sans(size: 13, color: HcColors.accentDark, weight: 600),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   static Widget _blob(double size, Color color) => IgnorePointer(
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-      );
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    ),
+  );
 }
 
 void _showFullscreenCode(BuildContext context, LoyaltyCard card) {
-  showDialog<void>(
+  showGeneralDialog<void>(
     context: context,
-    barrierColor: HcColors.text.withValues(alpha: 0.4),
-    builder: (context) => Dialog(
-      backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.all(24),
+    barrierDismissible: true,
+    barrierLabel: 'Закрыть',
+    barrierColor: HcColors.text.withValues(alpha: 0.45),
+    transitionDuration: Motion.of(context, Motion.medium),
+    transitionBuilder: (context, a, _, child) {
+      final c = CurvedAnimation(parent: a, curve: Motion.emphasized, reverseCurve: Curves.easeIn);
+      return FadeTransition(
+        opacity: c,
+        child: ScaleTransition(scale: Tween(begin: 0.94, end: 1.0).animate(c), child: child),
+      );
+    },
+    pageBuilder: (context, _, _) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BarcodeWidget(barcode: Barcode.qrCode(), data: card.barcode, width: 240, height: 240, color: Colors.black),
-            const SizedBox(height: 20),
-            BarcodeWidget(
-              barcode: Barcode.code128(),
-              data: card.barcode,
-              height: 64,
-              drawText: false,
-              color: Colors.black,
+        padding: const EdgeInsets.all(HcSpace.xl),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(HcRadii.card + 4),
+          child: Padding(
+            padding: const EdgeInsets.all(HcSpace.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Hero(
+                  tag: 'loyalty-qr',
+                  child: BarcodeWidget(
+                    barcode: Barcode.qrCode(),
+                    data: card.barcode,
+                    width: 240,
+                    height: 240,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: HcSpace.xl),
+                BarcodeWidget(
+                  barcode: Barcode.code128(),
+                  data: card.barcode,
+                  height: 64,
+                  drawText: false,
+                  color: Colors.black,
+                ),
+                const SizedBox(height: HcSpace.m),
+                Text(card.cardNumber, style: HcType.sans(size: 20, weight: 600, letterSpacing: 1.6)),
+                const SizedBox(height: HcSpace.l),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Готово')),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(card.cardNumber, style: HcType.sans(size: 20, weight: 500, letterSpacing: 2)),
-            const SizedBox(height: 16),
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Готово')),
-          ],
+          ),
         ),
       ),
     ),
@@ -267,33 +352,28 @@ class _TransactionTile extends StatelessWidget {
     final positive = t.amount > 0;
     final color = positive ? HcColors.accentDark : HcColors.terracotta;
     final sign = positive ? '+' : '−';
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
-          child: Row(
-            children: [
-              RoundOutlineIcon(positive ? Icons.add_rounded : Icons.remove_rounded, size: 38, color: color),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.title, style: HcType.sans(size: 15, weight: 500)),
-                    const SizedBox(height: 2),
-                    Text(
-                      [formatDateTimeShort(t.date), if (t.orderNumber != null) 'заказ №${t.orderNumber}'].join(' · '),
-                      style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: HcSpace.l, vertical: HcSpace.m),
+      child: Row(
+        children: [
+          IconTile(positive ? Icons.add_rounded : Icons.remove_rounded, size: 40, color: color),
+          const SizedBox(width: HcSpace.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.title, style: HcType.sans(size: 15, weight: 500)),
+                const SizedBox(height: 2),
+                Text(
+                  [formatDateTimeShort(t.date), if (t.orderNumber != null) 'заказ №${t.orderNumber}'].join(' · '),
+                  style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
                 ),
-              ),
-              Text('$sign${formatNumber(t.amount.abs())}', style: HcType.serif(size: 22, weight: 600, color: color)),
-            ],
+              ],
+            ),
           ),
-        ),
-        const Hairline(indent: 22),
-      ],
+          Text('$sign${formatNumber(t.amount.abs())}', style: HcType.serif(size: 22, weight: 600, color: color)),
+        ],
+      ),
     );
   }
 }
@@ -306,21 +386,24 @@ class _GuestInvite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Glass(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      padding: const EdgeInsets.all(HcSpace.xl),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const RoundOutlineIcon(Icons.qr_code_2_rounded, size: 64),
-          const SizedBox(height: 18),
-          Text('Ваша карта гостя', style: HcType.serif(size: 28)),
-          const SizedBox(height: 10),
+          const IconTile(Icons.qr_code_2_rounded, size: 56),
+          const SizedBox(height: HcSpace.l),
+          Text('Карта гостя в телефоне', style: HcType.serif(size: 28, weight: 600)),
+          const SizedBox(height: HcSpace.s),
           Text(
-            'Войдите по номеру телефона — и бонусная карта всегда будет в телефоне. '
-            'Покажите её бариста, чтобы копить и тратить бонусы.',
-            textAlign: TextAlign.center,
+            'Войдите по номеру телефона — карта появится сразу. Покажите её на кассе, чтобы копить бонусы '
+            'и оплачивать ими часть заказа.',
             style: HcType.sans(color: HcColors.textSecondary),
           ),
-          const SizedBox(height: 22),
-          SizedBox(width: double.infinity, child: FilledButton(onPressed: onLogin, child: const Text('Войти по номеру'))),
+          const SizedBox(height: HcSpace.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: onLogin, child: const Text('Войти по номеру')),
+          ),
         ],
       ),
     );
@@ -328,20 +411,20 @@ class _GuestInvite extends StatelessWidget {
 }
 
 class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton();
+  const _CardSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) => const Glass(
-        padding: EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SkeletonBox(height: 16, width: 110),
-            SizedBox(height: 22),
-            SkeletonBox(height: 48, width: 160),
-            SizedBox(height: 22),
-            SkeletonBox(height: 148),
-          ],
-        ),
-      );
+    padding: EdgeInsets.all(HcSpace.card),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SkeletonBox(height: 30, width: 120),
+        SizedBox(height: HcSpace.xl),
+        SkeletonBox(height: 52, width: 170),
+        SizedBox(height: HcSpace.l),
+        SkeletonBox(height: 144),
+      ],
+    ),
+  );
 }
