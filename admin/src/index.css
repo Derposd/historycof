@@ -12,6 +12,9 @@
 }
 
 :root {
+  /* Цвет данных на графиках: олива насыщеннее фирменной — фирменная на светлой
+     карточке читается как серый и не держит контраст 3:1 (проверено валидатором) */
+  --data: #6a8540;
   --bg: #fbf7ef;
   --bg-alt: #f5eee0;
   --glass: rgba(255, 255, 255, 0.62);
@@ -124,7 +127,11 @@ a { color: var(--accent-dark); }
 .spacer { flex: 1; }
 hr { border: 0; border-top: 1px solid var(--hairline); margin: 16px 0; }
 
-.stat-value { font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1; margin-top: 8px; }
+.stat-value {
+  font-family: var(--serif); font-size: 44px; font-weight: 500; line-height: 1; margin-top: 8px;
+  /* ровные цифры: у Cormorant по умолчанию «старинные», где 1 похожа на I */
+  font-variant-numeric: lining-nums tabular-nums;
+}
 
 /* ── Кнопки ── */
 button, .btn {
@@ -252,3 +259,35 @@ tr.clickable:hover td { background: rgba(255, 255, 255, 0.5); }
 .thumb-btn:hover .thumb-add, .thumb-btn.empty .thumb-add { opacity: 1; }
 .thumb-btn.empty .thumb-add { background: transparent; color: var(--accent-dark); }
 .logo svg { flex: none; }
+
+/* ── График регистраций ── */
+.chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.chart-total { display: flex; align-items: baseline; gap: 6px; }
+.chart-plot { position: relative; height: 140px; margin: 56px 0 0 28px; }
+.chart-grid { position: absolute; inset: 0; pointer-events: none; }
+.chart-gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(54, 43, 34, 0.1); }
+.chart-gridline.base { border-top: 1px solid rgba(54, 43, 34, 0.22); }
+.chart-gridline span {
+  position: absolute; left: -28px; top: -8px; width: 22px; text-align: right;
+  font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+.chart-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; }
+.chart-col {
+  flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center;
+  border-radius: 4px; cursor: default; outline: none;
+}
+.chart-col:hover, .chart-col.hover, .chart-col:focus-visible { background: rgba(106, 133, 64, 0.08); }
+.chart-bar {
+  width: 100%; max-width: 18px; background: var(--data); border-radius: 4px 4px 0 0;
+  transition: height 0.5s var(--ease), background 0.2s var(--ease);
+}
+.chart-col.hover .chart-bar:not(.zero) { background: #56702f; }
+.chart-bar.zero { height: 2px; background: rgba(54, 43, 34, 0.14); border-radius: 1px; }
+.chart-tip {
+  position: absolute; transform: translateX(-50%);
+  background: #fff; border: 1px solid var(--hairline); border-radius: 10px;
+  box-shadow: var(--shadow); padding: 6px 10px; white-space: nowrap; pointer-events: none;
+  font-size: 13px; animation: fade-in 0.15s var(--ease); z-index: 2;
+}
+.chart-axis { display: flex; justify-content: space-between; margin: 8px 0 0 28px; font-size: 11px; color: var(--text-2); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

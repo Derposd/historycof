@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { SignupsChart } from '../components/SignupsChart'
 import { ErrorBox, Loading } from '../components/ui'
 import { FEEDBACK_TYPE_LABELS, type AnalyticsSummary } from '../types'
 
@@ -9,7 +10,6 @@ export function Dashboard() {
   if (q.isPending) return <Loading />
   if (q.isError) return <ErrorBox error={q.error} />
   const s = q.data
-  const max = Math.max(1, ...s.signupsByDay.map((d) => d.n))
 
   return (
     <div className="stack" style={{ gap: 24 }}>
@@ -29,30 +29,7 @@ export function Dashboard() {
 
       <div className="grid grid-2">
         <div className="card">
-          <div className="caps">Регистрации за 30 дней</div>
-          {s.signupsByDay.length === 0 ? (
-            <p className="muted">Пока нет регистраций</p>
-          ) : (
-            <div
-              role="img"
-              aria-label="Регистрации по дням"
-              style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120, marginTop: 16 }}
-            >
-              {s.signupsByDay.map((d) => (
-                <div
-                  key={d.day}
-                  title={`${d.day}: ${d.n}`}
-                  style={{
-                    flex: 1,
-                    height: `${(d.n / max) * 100}%`,
-                    minHeight: 2,
-                    background: 'var(--accent)',
-                    borderRadius: '4px 4px 0 0',
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <SignupsChart points={s.signupsByDay} />
         </div>
         <div className="card stack">
           <div className="row">
