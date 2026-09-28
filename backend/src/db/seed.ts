@@ -1,5 +1,5 @@
 import { count } from 'drizzle-orm';
-import { loadConfig } from '../config/configuration';
+import { loadConfig, loadDotEnv } from '../config/configuration';
 import { createDb, Db } from './database.module';
 import { menuCategories, menuItems, menuSections, newsPosts } from './schema';
 
@@ -69,6 +69,7 @@ export async function seed(db: Db): Promise<void> {
 }
 
 if (require.main === module) {
+  loadDotEnv();
   const { pool, db } = createDb(loadConfig().databaseUrl);
   seed(db)
     .catch((e) => {

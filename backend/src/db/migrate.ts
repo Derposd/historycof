@@ -1,6 +1,6 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { join } from 'node:path';
-import { loadConfig } from '../config/configuration';
+import { loadConfig, loadDotEnv } from '../config/configuration';
 import { createDb } from './database.module';
 
 export async function runMigrations(databaseUrl: string): Promise<void> {
@@ -13,6 +13,7 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
 }
 
 if (require.main === module) {
+  loadDotEnv();
   runMigrations(loadConfig().databaseUrl)
     .then(() => console.log('Миграции применены'))
     .catch((e) => {

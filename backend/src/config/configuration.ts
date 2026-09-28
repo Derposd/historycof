@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
+
 /**
  * Единая точка чтения переменных окружения. Все значения по умолчанию —
  * безопасные для локальной разработки (моки вместо SMS/iiko/FCM/S3).
@@ -68,6 +71,18 @@ export interface AppConfig {
   };
   privacyPolicyVersion: string;
   timezone: string;
+}
+
+/**
+ * Подхватывает backend/.env, если он есть (встроенный process.loadEnvFile из Node 21.7+).
+ * Уже заданные переменные окружения не перезаписываются — в Docker/CI они главнее.
+ */
+export function loadDotEnv(path = '.env'): void {
+  if (!existsSync(path)) return;
+  const fromFile = parseEnv(readFileSync(path, 'utf8'));
+  for (const [k, v] of Object.entries(fromFile)) {
+    if (process.env[k] === undefined) process.env[k] = v;
+  }
 }
 
 const int = (v: string | undefined, def: number): number => {

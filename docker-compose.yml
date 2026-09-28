@@ -1,0 +1,68 @@
+# Локальный стенд: PostgreSQL + MinIO (S3) + API + админка.
+#   docker compose up --build
+# Админка: http://localhost:8080 (логин из ADMIN_BOOTSTRAP_*), API: http://localhost:3000/api/v1
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: history
+      POSTGRES_PASSWORD: history
+      POSTGRES_DB: history
+    volumes: [db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U history']
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: history
+      MINIO_ROOT_PASSWORD: history-secret
+    ports: ['9000:9000', '9001:9001']
+    volumes: [minio:/data]
+
+  # Создаёт публичный на чтение бакет для картинок
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      sh -c "until mc alias set local http://minio:9000 history history-secret; do sleep 1; done;
+             mc mb -p local/history-images && mc anonymous set download local/history-images"
+
+  backend:
+    build: ./backend
+    depends_on:
+      db: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://history:history@db:5432/history
+      PUBLIC_URL: http://localhost:3000
+      ADMIN_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080
+      JWT_SECRET: local-dev-jwt-secret-change-me
+      OTP_SECRET: local-dev-otp-secret-change-me
+      ADMIN_BOOTSTRAP_EMAIL: admin@historycoffee.ru
+      ADMIN_BOOTSTRAP_PASSWORD: change-me-please
+      SMS_PROVIDER: console
+      IIKO_MODE: mock
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: history-images
+      S3_ACCESS_KEY_ID: history
+      S3_SECRET_ACCESS_KEY: history-secret
+      S3_PUBLIC_BASE_URL: http://localhost:9000/history-images
+      S3_FORCE_PATH_STYLE: 'true'
+    ports: ['3000:3000']
+
+  admin:
+    build: ./admin
+    depends_on: [backend]
+    ports: ['8080:80']
+
+volumes:
+  db:
+  minio:

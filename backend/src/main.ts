@@ -3,7 +3,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-import { APP_CONFIG, AppConfig } from './config/configuration';
+import { APP_CONFIG, AppConfig, loadDotEnv } from './config/configuration';
 import { StorageService } from './storage/storage.service';
 
 export function configureApp(app: NestExpressApplication): void {
@@ -26,6 +26,7 @@ export function configureApp(app: NestExpressApplication): void {
 }
 
 async function bootstrap() {
+  loadDotEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(), { bufferLogs: false });
   configureApp(app);
   app.enableShutdownHooks();
