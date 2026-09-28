@@ -70,9 +70,15 @@ jobs:
       - name: Установка / обновление стенда
         if: inputs.action == 'deploy'
         run: |
+          # Образы собираем здесь, на раннере: на сервере 1 ядро и 2 ГБ, сборка там
+          # могла бы помешать соседнему приложению
+          docker build -t historycoffee-backend:test backend
+          docker build -t historycoffee-admin:test admin
+          docker save historycoffee-backend:test historycoffee-admin:test | gzip -1 > /tmp/hc-images.tar.gz
+          ls -lh /tmp/hc-images.tar.gz
           git archive --format=tar.gz -o /tmp/hc-release.tgz HEAD
           # Секреты стенда хранятся в репозитории только в зашифрованном виде
           openssl enc -d -aes-256-cbc -pbkdf2 -pass env:REPORT_KEY -in deploy/secrets.env.enc -out /tmp/hc-secrets.env
-          scp -q /tmp/hc-release.tgz /tmp/hc-secrets.env deploy/server-deploy.sh vps:/tmp/
+          scp -q /tmp/hc-images.tar.gz /tmp/hc-release.tgz /tmp/hc-secrets.env deploy/server-deploy.sh vps:/tmp/
           rm -f /tmp/hc-secrets.env
           ssh vps "chmod 600 /tmp/hc-secrets.env && mv /tmp/server-deploy.sh /tmp/hc-deploy.sh && HC_HOST='${{ inputs.host }}' bash /tmp/hc-deploy.sh; code=\$?; rm -f /tmp/hc-deploy.sh; exit \$code"

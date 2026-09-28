@@ -28,6 +28,10 @@ else
 fi
 echo "Порт стенда: $PORT"
 
+echo "== загрузка готовых образов"
+gunzip -c /tmp/hc-images.tar.gz | docker load
+rm -f /tmp/hc-images.tar.gz
+
 install -m 600 /tmp/hc-secrets.env "$APP/.env"
 cat >> "$APP/.env" <<ENV
 HC_PORT=$PORT
@@ -40,8 +44,6 @@ rm -f /tmp/hc-secrets.env /tmp/hc-release.tgz
 cd "$APP/src/deploy"
 dc() { docker compose -p historycoffee -f docker-compose.vps.yml --env-file "$APP/.env" "$@"; }
 
-echo "== сборка образов"
-dc build --pull 2>&1 | tail -n 25
 echo "== запуск"
 dc up -d --remove-orphans
 
@@ -60,6 +62,9 @@ dc exec -T -e SEED_DEMO=true backend node dist/db/seed.js
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
   ufw allow "$PORT/tcp" comment 'history-coffee' >/dev/null && echo "ufw: открыт порт $PORT"
 fi
+
+# Убираем только свои устаревшие образы (по метке), чужие не трогаем
+docker image prune -f --filter label=com.historycoffee=1 >/dev/null || true
 
 dc ps
 echo "READY http://$HOST:$PORT"

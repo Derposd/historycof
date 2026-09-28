@@ -1,6 +1,8 @@
 # Тестовый стенд History Coffee на VPS. Изолирован от других приложений сервера:
 # свой compose-проект, своя внутренняя сеть, своя база и том для фото,
 # наружу открыт только один порт (HC_PORT) — админка и API за одним адресом.
+# Образы собираются в CI и привозятся готовыми (сервер маленький — сборка на нём
+# могла бы отнять память у соседнего приложения). Ресурсы контейнеров ограничены.
 name: historycoffee
 
 services:
@@ -16,11 +18,15 @@ services:
       test: ['CMD-SHELL', 'pg_isready -U history']
       interval: 5s
       retries: 20
+    mem_limit: 256m
+    cpus: 0.5
     networks: [internal]
 
   backend:
-    build: ../backend
+    image: historycoffee-backend:test
     restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.6
     env_file: /opt/history-coffee/.env
     environment:
       DATABASE_URL: postgres://history:${POSTGRES_PASSWORD}@db:5432/history
@@ -32,8 +38,10 @@ services:
     networks: [internal]
 
   admin:
-    build: ../admin
+    image: historycoffee-admin:test
     restart: unless-stopped
+    mem_limit: 64m
+    cpus: 0.25
     ports: ['${HC_PORT}:80']
     depends_on: [backend]
     networks: [internal]
