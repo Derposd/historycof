@@ -59,9 +59,13 @@ jobs:
             NAME=history-coffee-demo
           fi
           flutter build apk --release $DEFINES
+          cp build/app/outputs/flutter-apk/app-release.apk /tmp/universal.apk
+          # Лёгкий APK только для arm64 — подходит почти всем современным телефонам
+          flutter build apk --release --split-per-abi --target-platform android-arm64 $DEFINES
           flutter build appbundle --release $DEFINES
           mkdir -p out
-          cp build/app/outputs/flutter-apk/app-release.apk "out/$NAME.apk"
+          cp /tmp/universal.apk "out/$NAME.apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "out/$NAME-arm64.apk"
           cp build/app/outputs/bundle/release/app-release.aab "out/$NAME.aab"
           ls -la out
 
@@ -80,7 +84,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh release delete android-demo --cleanup-tag --yes || true
-          gh release create android-demo out/history-coffee-demo.apk \
+          gh release create android-demo out/history-coffee-demo.apk out/history-coffee-demo-arm64.apk \
             --prerelease --target "$GITHUB_SHA" \
             --title "History Coffee — демо для Android" \
             --notes "Демо-версия без сервера: примерные данные, вход по любому номеру с кодом 1234. Сборка из ${GITHUB_SHA::7}."

@@ -35,6 +35,7 @@ APK собирает GitHub Actions (`.github/workflows/android.yml`) при к�
 
 Демо-APK также публикуется в пре-релиз с постоянной ссылкой (без входа в GitHub):
 https://github.com/Derposd/historycof/releases/download/android-demo/history-coffee-demo.apk
+(облегчённый, только arm64: `history-coffee-demo-arm64.apk` по той же ссылке)
 
 Установка на телефон: скачать `.apk`, открыть, разрешить установку из этого источника.
 
