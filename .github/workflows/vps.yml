@@ -53,6 +53,8 @@ jobs:
             ServerAliveInterval 30
             ConnectTimeout 20
           CFG
+          # Отпечаток ключа (публичная информация) — чтобы убедиться, что в секрете нужный ключ
+          echo "Отпечаток ключа из секрета: $(ssh-keygen -y -f ~/.ssh/vps | ssh-keygen -lf - | awk '{print $2}')"
           ssh -o BatchMode=yes vps true && echo "Подключение есть"
 
       - name: Осмотр (только чтение)
