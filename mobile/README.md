@@ -33,6 +33,9 @@ APK собирает GitHub Actions (`.github/workflows/android.yml`) при к�
   (Settings → Secrets and variables → Actions → Variables) или укажите адрес при ручном
   запуске (Run workflow). Тогда соберётся рабочая версия `history-coffee.apk`.
 
+Демо-APK также публикуется в пре-релиз с постоянной ссылкой (без входа в GitHub):
+https://github.com/Derposd/historycof/releases/download/android-demo/history-coffee-demo.apk
+
 Установка на телефон: скачать `.apk`, открыть, разрешить установку из этого источника.
 
 Локально (нужен Android SDK):

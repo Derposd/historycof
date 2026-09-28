@@ -15,6 +15,8 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # публикация демо-APK в релиз
     defaults: { run: { working-directory: mobile } }
     env:
       HAS_RELEASE_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
@@ -68,3 +70,17 @@ jobs:
           name: history-coffee-android
           path: mobile/out/*
           retention-days: 30
+
+      # Демо-сборка (без сервера) публикуется в пре-релиз с постоянной ссылкой —
+      # её можно открыть с телефона без входа в GitHub.
+      - name: Опубликовать демо-APK
+        if: ${{ !(inputs.api_url || vars.API_URL) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete android-demo --cleanup-tag --yes || true
+          gh release create android-demo out/history-coffee-demo.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "History Coffee — демо для Android" \
+            --notes "Демо-версия без сервера: примерные данные, вход по любому номеру с кодом 1234. Сборка из ${GITHUB_SHA::7}."
