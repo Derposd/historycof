@@ -27,5 +27,5 @@ for pair in "+79990000001:2580" "+79990000002:1470"; do
 done
 
 curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" -F type=suggestion -F "message=Проверка стенда: обращение от тестового клиента" "$BASE/api/v1/feedback" >/dev/null
-N=$(curl -fsS -m 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/api/v1/admin/feedback" | j "sum(1 for f in d['items'] if f['message'].startswith('Проверка стенда'))")
+N=$(curl -fsS -m 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/api/v1/admin/feedback?page=0&pageSize=30" | j "sum(1 for f in d['items'] if f['message'].startswith('Проверка стенда'))")
 [ "$N" -ge 1 ] && ok "обращение клиента видно в админке"

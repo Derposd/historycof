@@ -357,7 +357,10 @@ describe('History Coffee API (e2e)', () => {
       await http.post('/api/v1/feedback').field('type', 'spam').field('message', 'xxx').expect(400);
 
       const sAuth = { Authorization: `Bearer ${editorToken}` };
-      const list = await http.get('/api/v1/admin/feedback?status=sent').set(sAuth).expect(200);
+      // ровно такой запрос делает админка: фильтр + страница
+      const list = await http.get('/api/v1/admin/feedback?page=0&pageSize=30&status=sent').set(sAuth).expect(200);
+      await http.get('/api/v1/admin/feedback?page=0&pageSize=30').set(sAuth).expect(200);
+      await http.get('/api/v1/admin/feedback?pageSize=500').set(sAuth).expect(400);
       expect(list.body.total).toBe(2);
       expect(list.body.items.find((f: { id: string }) => f.id === created.body.id).guestPhone).toBe('+79001114400');
 

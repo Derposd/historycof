@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  DefaultValuePipe,
   Get,
   Module,
   Param,
-  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -16,7 +14,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { CurrentPrincipal, GuestGuard, GuestPrincipal, OptionalGuestGuard, StaffGuard, StaffPrincipal } from '../common/auth';
 import { GuestsModule } from '../guests/guests.module';
@@ -41,9 +40,12 @@ class CreateFeedbackDto {
   contactPhone?: string;
 }
 
+/** Фильтры и страница списка — одним DTO: иначе строгая валидация отклоняет page/pageSize. */
 class ListFeedbackQuery {
   @IsOptional() @IsIn(STATUSES) status?: FeedbackStatus;
   @IsOptional() @IsIn(TYPES) type?: FeedbackType;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
 }
 
 class AnswerFeedbackDto {
@@ -87,12 +89,8 @@ export class AdminFeedbackController {
   constructor(private readonly feedback: FeedbackService) {}
 
   @Get()
-  list(
-    @Query() q: ListFeedbackQuery,
-    @Query('page', new DefaultValuePipe(0), ParseIntPipe) page: number,
-    @Query('pageSize', new DefaultValuePipe(30), ParseIntPipe) pageSize: number,
-  ) {
-    return this.feedback.list({ ...q, page: Math.max(page, 0), pageSize: Math.min(Math.max(pageSize, 1), 100) });
+  list(@Query() q: ListFeedbackQuery) {
+    return this.feedback.list({ status: q.status, type: q.type, page: q.page ?? 0, pageSize: q.pageSize ?? 30 });
   }
 
   @Get(':id')
