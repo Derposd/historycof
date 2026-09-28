@@ -25,3 +25,4 @@ mobile/ios/Runner/GoogleService-Info.plist
 *.jks
 *.keystore
 key.properties
+apk-share/
