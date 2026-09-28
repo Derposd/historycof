@@ -13,6 +13,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 COPY drizzle ./drizzle
+# Каталог для фото (том docker) должен принадлежать пользователю приложения
+RUN mkdir -p /data/uploads && chown node:node /data/uploads
 USER node
 EXPOSE 3000
 # Миграции применяются при старте контейнера

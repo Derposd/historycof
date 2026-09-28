@@ -5,6 +5,7 @@
 
     <application
         android:label="History Coffee"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

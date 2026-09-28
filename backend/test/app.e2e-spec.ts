@@ -42,6 +42,7 @@ describe('History Coffee API (e2e)', () => {
       OTP_MAX_PER_HOUR: '100',
       OTP_REVIEW_PHONE: '+79990000000',
       OTP_REVIEW_CODE: '1234',
+      OTP_TEST_ACCOUNTS: '+79990000001:2580, +79990000002:1470',
       ADMIN_BOOTSTRAP_EMAIL: 'owner@historycoffee.ru',
       ADMIN_BOOTSTRAP_PASSWORD: 'super-secret-password',
       STORAGE_LOCAL_DIR: mkdtempSync(join(tmpdir(), 'hc-uploads-')),
@@ -145,6 +146,14 @@ describe('History Coffee API (e2e)', () => {
         .post('/api/v1/auth/otp/verify')
         .send({ phone: '+79990000000', code: '1234', acceptPrivacyPolicy: true })
         .expect(200);
+    });
+
+    it('тестовые аккаунты из OTP_TEST_ACCOUNTS входят со своими кодами', async () => {
+      for (const [phone, code] of [['+79990000001', '2580'], ['+79990000002', '1470']]) {
+        await http.post('/api/v1/auth/otp/request').send({ phone }).expect(200);
+        expect(sms.last.has(phone)).toBe(false);
+        await http.post('/api/v1/auth/otp/verify').send({ phone, code, acceptPrivacyPolicy: true }).expect(200);
+      }
     });
 
     it('без токена /me недоступен', () => http.get('/api/v1/me').expect(401));

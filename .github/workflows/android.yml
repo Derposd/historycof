@@ -54,6 +54,8 @@ jobs:
           if [ -n "$API_URL" ]; then
             DEFINES="--dart-define=API_URL=$API_URL"
             NAME=history-coffee
+            # Тестовый стенд без HTTPS: разрешаем http только в такой сборке
+            case "$API_URL" in http://*) export ALLOW_CLEARTEXT=true ;; esac
           else
             DEFINES="--dart-define=DEMO=true"
             NAME=history-coffee-demo
@@ -74,6 +76,19 @@ jobs:
           name: history-coffee-android
           path: mobile/out/*
           retention-days: 30
+
+      # Рабочая тестовая сборка (с адресом сервера) — в отдельный пре-релиз.
+      - name: Опубликовать тестовый APK
+        if: ${{ inputs.api_url || vars.API_URL }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete android-test --cleanup-tag --yes || true
+          gh release create android-test out/history-coffee.apk out/history-coffee-arm64.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "History Coffee — тестовая сборка для Android" \
+            --notes "Рабочая тестовая сборка, подключена к тестовому серверу. Сборка из ${GITHUB_SHA::7}."
 
       # Демо-сборка (без сервера) публикуется в пре-релиз с постоянной ссылкой —
       # её можно открыть с телефона без входа в GitHub.

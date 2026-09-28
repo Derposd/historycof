@@ -26,8 +26,11 @@ export interface AppConfig {
     maxPerHour: number;
     maxAttempts: number;
     /** Тестовый номер для ревью App Store / Google Play (фиксированный код, SMS не отправляется). */
-    reviewPhone?: string;
-    reviewCode?: string;
+    /**
+     * Номера с фиксированным кодом, SMS не отправляется: ревью в сторах и тестовые аккаунты.
+     * Собирается из OTP_REVIEW_PHONE/OTP_REVIEW_CODE и OTP_TEST_ACCOUNTS="+79990000001:1234,+79990000002:5678".
+     */
+    fixedCodes: Record<string, string>;
   };
   sms: {
     provider: 'console' | 'smsru';
@@ -126,8 +129,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       resendCooldownSec: int(env.OTP_RESEND_COOLDOWN_SEC, 60),
       maxPerHour: int(env.OTP_MAX_PER_HOUR, 5),
       maxAttempts: int(env.OTP_MAX_ATTEMPTS, 5),
-      reviewPhone: opt(env.OTP_REVIEW_PHONE),
-      reviewCode: opt(env.OTP_REVIEW_CODE),
+      fixedCodes: parseFixedCodes(env),
     },
     sms: {
       provider: env.SMS_PROVIDER === 'smsru' ? 'smsru' : 'console',
@@ -170,6 +172,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     privacyPolicyVersion: opt(env.PRIVACY_POLICY_VERSION) ?? '2026-09-28',
     timezone: opt(env.VENUE_TIMEZONE) ?? 'Europe/Moscow',
   };
+}
+
+function parseFixedCodes(env: NodeJS.ProcessEnv): Record<string, string> {
+  const out: Record<string, string> = {};
+  const add = (phone?: string, code?: string) => {
+    if (phone && code && /^\+7\d{10}$/.test(phone) && /^\d{4}$/.test(code)) out[phone] = code;
+  };
+  add(opt(env.OTP_REVIEW_PHONE), opt(env.OTP_REVIEW_CODE));
+  for (const pair of (env.OTP_TEST_ACCOUNTS ?? '').split(',')) {
+    const [phone, code] = pair.split(':').map((x) => x.trim());
+    add(phone, code);
+  }
+  return out;
 }
 
 export const APP_CONFIG = Symbol('APP_CONFIG');

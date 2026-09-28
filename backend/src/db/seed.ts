@@ -11,7 +11,11 @@ import { menuCategories, menuItems, menuSections, newsPosts } from './schema';
  * Остальное меню вносится через админку (или импортом из iiko — см. docs/client-questions.md).
  * Категории бара — рабочие заготовки, их состав сверить с заказчиком.
  */
-export async function seed(db: Db): Promise<void> {
+/**
+ * demoImagesBaseUrl — для тестового стенда: к капучино и примеру блюда подставляются
+ * демо-иллюстрации (лежат в uploads/demo, нарисованы для проекта), добавляется «Пример блюда».
+ */
+export async function seed(db: Db, demoImagesBaseUrl?: string): Promise<void> {
   const [{ n }] = await db.select({ n: count() }).from(menuSections);
   if (n > 0) {
     console.log('Меню уже заполнено — сид пропущен');
@@ -26,13 +30,30 @@ export async function seed(db: Db): Promise<void> {
     ])
     .returning();
 
-  await db.insert(menuCategories).values(
-    ['Завтраки', 'Салаты', 'Боулы', 'Основное', 'Тосты · Сэндвичи'].map((title, sort) => ({
-      sectionId: kitchen.id,
-      title,
-      sort,
-    })),
-  );
+  const kitchenCategories = await db
+    .insert(menuCategories)
+    .values(
+      ['Завтраки', 'Салаты', 'Боулы', 'Основное', 'Тосты · Сэндвичи'].map((title, sort) => ({
+        sectionId: kitchen.id,
+        title,
+        sort,
+      })),
+    )
+    .returning();
+  const img = (name: string) => (demoImagesBaseUrl ? `${demoImagesBaseUrl.replace(/\/$/, '')}/${name}` : null);
+
+  if (demoImagesBaseUrl) {
+    await db.insert(menuItems).values({
+      categoryId: kitchenCategories[0].id,
+      title: 'Пример блюда',
+      description: 'Тестовая позиция: фото, состав, цены и бейджи каждого блюда задаются в админке.',
+      imageUrl: img('dish.jpg'),
+      prices: [{ label: '', amount: 390 }],
+      badges: ['team_choice', 'story'],
+      story: 'Здесь будет короткая легенда блюда — для позиций с пометкой «Блюдо с историей».',
+      sort: 0,
+    });
+  }
 
   const [coffee] = await db
     .insert(menuCategories)
@@ -43,6 +64,7 @@ export async function seed(db: Db): Promise<void> {
     categoryId: coffee.id,
     title: 'Капучино',
     description: null, // состав уточнить у заказчика
+    imageUrl: img('cappuccino.jpg'),
     prices: [
       { label: 'S', amount: 270 },
       { label: 'L', amount: 290 },
@@ -59,6 +81,7 @@ export async function seed(db: Db): Promise<void> {
         'Теперь меню, бонусы и новости кофейни — всегда под рукой. ' +
         'Покажите QR-код бариста, чтобы копить и тратить бонусы. ' +
         'Место для ваших историй — Нальчик, ул. Толстого, 43.',
+      imageUrl: img('cappuccino.jpg'),
       status: 'published',
       pinned: true,
       publishedAt: new Date(),
@@ -70,8 +93,9 @@ export async function seed(db: Db): Promise<void> {
 
 if (require.main === module) {
   loadDotEnv();
-  const { pool, db } = createDb(loadConfig().databaseUrl);
-  seed(db)
+  const config = loadConfig();
+  const { pool, db } = createDb(config.databaseUrl);
+  seed(db, process.env.SEED_DEMO === 'true' ? `${config.publicUrl}/uploads/demo` : undefined)
     .catch((e) => {
       console.error(e);
       process.exitCode = 1;

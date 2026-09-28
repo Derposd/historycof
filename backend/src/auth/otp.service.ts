@@ -34,8 +34,9 @@ export class OtpService {
     return hmacSha256(this.config.otp.secret, `${phone}:${code}`);
   }
 
-  private isReviewPhone(phone: string): boolean {
-    return !!this.config.otp.reviewPhone && !!this.config.otp.reviewCode && phone === this.config.otp.reviewPhone;
+  /** Фиксированный код для тестовых номеров (ревью сторов, тестовые аккаунты). */
+  private fixedCodeFor(phone: string): string | undefined {
+    return this.config.otp.fixedCodes[phone];
   }
 
   /** Отправляет код. Возвращает, через сколько секунд можно запросить повторно. */
@@ -66,7 +67,8 @@ export class OtpService {
       );
     }
 
-    const code = this.isReviewPhone(phone) ? this.config.otp.reviewCode! : randomDigits(OTP_LENGTH);
+    const fixed = this.fixedCodeFor(phone);
+    const code = fixed ?? randomDigits(OTP_LENGTH);
     await this.db.insert(otpCodes).values({
       phone,
       codeHash: this.hash(phone, code),
@@ -74,7 +76,7 @@ export class OtpService {
       createdAt: now,
     });
 
-    if (!this.isReviewPhone(phone)) {
+    if (!fixed) {
       await this.sms.send(phone, `History Coffee: код для входа ${code}. Никому его не сообщайте.`);
     }
     this.logger.log(`OTP отправлен на ${maskPhone(phone)}`);

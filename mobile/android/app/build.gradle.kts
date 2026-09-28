@@ -31,6 +31,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Тестовый стенд без домена работает по http. Разрешаем открытый трафик
+        // только в сборках, где это явно попросили (ALLOW_CLEARTEXT=true в CI).
+        // Для публикации нужен домен с HTTPS — тогда переменная не задаётся.
+        manifestPlaceholders["usesCleartextTraffic"] = (System.getenv("ALLOW_CLEARTEXT") == "true").toString()
     }
 
     signingConfigs {
