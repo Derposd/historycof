@@ -49,7 +49,7 @@ function VenueForm({ initial }: { initial: VenueT }) {
         <button type="submit">Сохранить</button>
       </div>
       {msg && (
-        <div className={msg.ok ? 'card' : 'card error'} style={{ marginBottom: 16 }}>
+        <div className={`desktop-only ${msg.ok ? 'card' : 'card error'}`} style={{ marginBottom: 16 }}>
           {msg.text}
         </div>
       )}
@@ -113,24 +113,26 @@ function VenueForm({ initial }: { initial: VenueT }) {
             .map((h) => {
               const off = h.open === null
               return (
-                <div key={h.day} className="row">
-                  <span style={{ width: 120 }}>{DAYS[h.day - 1]}</span>
+                <div key={h.day} className="hours-row">
+                  <span className="hours-day">{DAYS[h.day - 1]}</span>
                   <input
                     type="time"
+                    className="hours-open"
                     value={h.open ?? ''}
                     disabled={off}
                     onChange={(e) => setDay(h.day, { open: e.target.value })}
                     required={!off}
                   />
-                  <span>–</span>
+                  <span className="hours-dash">–</span>
                   <input
                     type="time"
+                    className="hours-close"
                     value={h.close ?? ''}
                     disabled={off}
                     onChange={(e) => setDay(h.day, { close: e.target.value })}
                     required={!off}
                   />
-                  <label className="check small">
+                  <label className="check small hours-off">
                     <input
                       type="checkbox"
                       checked={off}
@@ -144,6 +146,10 @@ function VenueForm({ initial }: { initial: VenueT }) {
               )
             })}
         </div>
+      </div>
+      <div className="save-bar">
+        {msg && <div className={`save-msg ${msg.ok ? 'small' : 'error'}`}>{msg.text}</div>}
+        <button type="submit">Сохранить</button>
       </div>
     </form>
   )

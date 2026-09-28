@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth-context'
 import type { AnalyticsSummary } from '../types'
@@ -7,6 +8,19 @@ import { Logo } from './Monogram'
 
 export function Layout() {
   const { user, logout } = useAuth()
+  const { pathname } = useLocation()
+  // На телефоне меню — выезжающая панель. Она «привязана» к странице, на которой её открыли,
+  // поэтому переход по ссылке закрывает её сам.
+  const [navFor, setNavFor] = useState<string | null>(null)
+  const navOpen = navFor === pathname
+  const setNavOpen = (v: boolean) => setNavFor(v ? pathname : null)
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavFor(null)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [navOpen])
+
   // Счётчик неотвеченных обращений в меню — обновляется раз в минуту.
   const summary = useQuery({
     queryKey: ['analytics'],
@@ -16,8 +30,24 @@ export function Layout() {
   const open = summary.data?.feedback.open ?? 0
 
   return (
-    <div className="layout">
-      <aside className="sidebar">
+    <div className={`layout${navOpen ? ' nav-open' : ''}`}>
+      <header className="topbar">
+        <Logo size={34} />
+        <span className="spacer" />
+        <button
+          className="ghost burger"
+          aria-label={navOpen ? 'Закрыть меню' : 'Открыть меню'}
+          aria-expanded={navOpen}
+          aria-controls="sidebar"
+          onClick={() => setNavOpen(!navOpen)}
+        >
+          <span className="burger-lines" aria-hidden="true" />
+          {open > 0 && !navOpen && <span className="burger-dot" aria-hidden="true" />}
+        </button>
+      </header>
+      <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
+
+      <aside className="sidebar" id="sidebar">
         <Logo size={40} />
         <NavLink to="/" end className="nav-link">
           Обзор

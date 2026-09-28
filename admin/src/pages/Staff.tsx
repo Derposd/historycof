@@ -41,7 +41,7 @@ export function Staff() {
       {q.isError && <ErrorBox error={q.error} />}
       {q.data && (
         <div className="card" style={{ padding: 8 }}>
-          <table>
+          <table className="rows-table staff-table">
             <thead>
               <tr>
                 <th>Имя</th>
@@ -54,13 +54,16 @@ export function Staff() {
             <tbody>
               {q.data.map((u) => (
                 <tr key={u.id} style={{ opacity: u.active ? 1 : 0.5 }}>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>
+                  <td className="st-name">{u.name}</td>
+                  <td className="st-email">{u.email}</td>
+                  <td className="st-role">
                     <span className={`pill ${u.role === 'admin' ? 'accent' : ''}`}>{ROLE_LABELS[u.role]}</span>
                   </td>
-                  <td className="small">{formatDate(u.lastLoginAt)}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="small st-login">
+                    <span className="mobile-only muted">Вход: </span>
+                    {formatDate(u.lastLoginAt)}
+                  </td>
+                  <td className="st-action" style={{ textAlign: 'right' }}>
                     {u.id !== user?.id && (
                       <button className={u.active ? 'danger small' : 'ghost small'} onClick={() => toggle.mutate(u)}>
                         {u.active ? 'Отключить' : 'Включить'}

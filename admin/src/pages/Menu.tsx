@@ -69,46 +69,47 @@ export function Menu() {
       <div className="stack" style={{ gap: 20 }}>
         {section?.categories.map((c, ci) => (
           <div key={c.id} className="card">
-            <div className="row" style={{ marginBottom: 12 }}>
-              <h2>{c.title}</h2>
-              {!c.visible && <span className="pill">Скрыта</span>}
-              <span className="spacer" />
-              <button
-                className="ghost small"
-                aria-label="Выше"
-                disabled={ci === 0}
-                onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, -1) })}
-              >
-                ↑
-              </button>
-              <button
-                className="ghost small"
-                aria-label="Ниже"
-                disabled={ci === section.categories.length - 1}
-                onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, 1) })}
-              >
-                ↓
-              </button>
-              <button className="ghost small" onClick={() => setCatEdit({ category: c, sectionId: section.id })}>
-                Настроить
-              </button>
-              <button className="small" onClick={() => setItemEdit({ item: null, categoryId: c.id })}>
-                + Позиция
-              </button>
+            <div className="cat-head">
+              <div className="row cat-title">
+                <h2>{c.title}</h2>
+                {!c.visible && <span className="pill">Скрыта</span>}
+              </div>
+              <div className="row cat-actions">
+                <button
+                  className="ghost small icon"
+                  aria-label="Выше"
+                  disabled={ci === 0}
+                  onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, -1) })}
+                >
+                  ↑
+                </button>
+                <button
+                  className="ghost small icon"
+                  aria-label="Ниже"
+                  disabled={ci === section.categories.length - 1}
+                  onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, 1) })}
+                >
+                  ↓
+                </button>
+                <button className="ghost small" onClick={() => setCatEdit({ category: c, sectionId: section.id })}>
+                  Настроить
+                </button>
+                <button className="small" onClick={() => setItemEdit({ item: null, categoryId: c.id })}>
+                  + Позиция
+                </button>
+              </div>
             </div>
             {c.items.length === 0 ? (
               <div className="muted small">В категории пока нет позиций — в приложении она не показывается</div>
             ) : (
-              <table>
-                <tbody>
-                  {c.items.map((i, ii) => (
-                    <tr key={i.id} style={{ opacity: i.available ? 1 : 0.5 }}>
-                      <td style={{ width: 64 }}>
-                        <ThumbUpload item={i} onUploaded={(url) => patchItem.mutate({ id: i.id, data: { imageUrl: url } })} />
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{i.title}</div>
-                        {i.description && <div className="muted small">{i.description}</div>}
+              <div className="items">
+                {c.items.map((i, ii) => (
+                  <div key={i.id} className={`item${i.available ? '' : ' off'}`}>
+                    <ThumbUpload item={i} onUploaded={(url) => patchItem.mutate({ id: i.id, data: { imageUrl: url } })} />
+                    <div className="item-info">
+                      <div style={{ fontWeight: 500 }}>{i.title}</div>
+                      {i.description && <div className="muted small">{i.description}</div>}
+                      {i.badges.length > 0 && (
                         <div className="row" style={{ marginTop: 6, gap: 6 }}>
                           {i.badges.map((b) => (
                             <span key={b} className={`pill ${b === 'story' ? 'outline' : b === 'team_choice' ? 'accent' : 'gold'}`}>
@@ -116,43 +117,44 @@ export function Menu() {
                             </span>
                           ))}
                         </div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        {i.prices.map((p) => `${p.label ? `${p.label} ` : ''}${p.amount} ₽`).join(' / ') || '—'}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                        <label className="check small" style={{ marginRight: 10 }}>
-                          <input
-                            type="checkbox"
-                            checked={i.available}
-                            onChange={(e) => patchItem.mutate({ id: i.id, data: { available: e.target.checked } })}
-                          />
-                          В меню
-                        </label>
-                        <button
-                          className="ghost small"
-                          aria-label="Выше"
-                          disabled={ii === 0}
-                          onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, -1) })}
-                        >
-                          ↑
-                        </button>{' '}
-                        <button
-                          className="ghost small"
-                          aria-label="Ниже"
-                          disabled={ii === c.items.length - 1}
-                          onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, 1) })}
-                        >
-                          ↓
-                        </button>{' '}
-                        <button className="ghost small" onClick={() => setItemEdit({ item: i, categoryId: c.id })}>
-                          Изменить
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </div>
+                    <div className="item-price">
+                      {i.prices.map((p) => `${p.label ? `${p.label} ` : ''}${p.amount} ₽`).join(' / ') || '—'}
+                    </div>
+                    <div className="item-actions">
+                      <label className="check small">
+                        <input
+                          type="checkbox"
+                          checked={i.available}
+                          onChange={(e) => patchItem.mutate({ id: i.id, data: { available: e.target.checked } })}
+                        />
+                        В меню
+                      </label>
+                      <span className="spacer" />
+                      <button
+                        className="ghost small icon"
+                        aria-label="Выше"
+                        disabled={ii === 0}
+                        onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, -1) })}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        className="ghost small icon"
+                        aria-label="Ниже"
+                        disabled={ii === c.items.length - 1}
+                        onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, 1) })}
+                      >
+                        ↓
+                      </button>
+                      <button className="ghost small" onClick={() => setItemEdit({ item: i, categoryId: c.id })}>
+                        Изменить
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         ))}
@@ -361,7 +363,7 @@ function ItemEditor({
             Несколько вариантов — например, капучино S 270 / L 290. Для одного варианта подпись можно не заполнять.
           </span>
           {prices.map((p, i) => (
-            <div key={i} className="row">
+            <div key={i} className="row price-row">
               <input
                 placeholder="Подпись (S, L, 250 мл)"
                 value={p.label}
@@ -375,7 +377,7 @@ function ItemEditor({
                 placeholder="₽"
                 value={p.amount || ''}
                 onChange={(e) => setPrices(prices.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))}
-                style={{ width: 120 }}
+                className="price-amount"
               />
               {prices.length > 1 && (
                 <button type="button" className="ghost small" onClick={() => setPrices(prices.filter((_, j) => j !== i))}>

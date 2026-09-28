@@ -38,7 +38,7 @@ export function Feedback() {
           <div className="caps">Жалобы, предложения, благодарности</div>
           <h1>Обращения</h1>
         </div>
-        <div className="row">
+        <div className="row filters">
           <select value={status} onChange={(e) => (setStatus(e.target.value as FeedbackStatus | ''), setPage(0))}>
             <option value="">Все статусы</option>
             {Object.entries(FEEDBACK_STATUS_LABELS).map(([k, v]) => (
@@ -65,7 +65,7 @@ export function Feedback() {
           {q.data.items.length === 0 ? (
             <div className="empty">Обращений нет</div>
           ) : (
-            <table>
+            <table className="rows-table fb-table">
               <thead>
                 <tr>
                   <th>Дата</th>
@@ -78,20 +78,20 @@ export function Feedback() {
               <tbody>
                 {q.data.items.map((f) => (
                   <tr key={f.id} className="clickable" onClick={() => navigate(`/feedback/${f.id}`)}>
-                    <td style={{ whiteSpace: 'nowrap' }} className="small">
+                    <td style={{ whiteSpace: 'nowrap' }} className="small fb-date">
                       {formatDate(f.createdAt)}
                     </td>
-                    <td>
+                    <td className="fb-type">
                       <TypePill type={f.type} />
                     </td>
-                    <td style={{ fontWeight: f.status === 'sent' ? 600 : 400 }}>
+                    <td className="fb-msg" style={{ fontWeight: f.status === 'sent' ? 600 : 400 }}>
                       {f.message.length > 140 ? `${f.message.slice(0, 140)}…` : f.message}
                       {f.photoUrl && <span className="muted small"> · фото</span>}
                     </td>
-                    <td className="small" style={{ whiteSpace: 'nowrap' }}>
+                    <td className="small fb-guest">
                       {f.guestName ?? ''} {formatPhone(f.contactPhone ?? f.guestPhone)}
                     </td>
-                    <td>
+                    <td className="fb-status">
                       <StatusPill status={f.status} />
                     </td>
                   </tr>

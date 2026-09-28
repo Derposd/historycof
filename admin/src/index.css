@@ -100,13 +100,6 @@ a { color: var(--accent-dark); }
 .content { padding: 32px 40px 64px; max-width: 1200px; width: 100%; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 
-@media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 12px; }
-  .logo-sub, .sidebar-footer { display: none; }
-  .logo { padding: 0 8px 0 0; }
-  .content { padding: 20px 16px 48px; }
-}
 
 /* ── Поверхности ── */
 .card {
@@ -153,7 +146,10 @@ button.link { background: none; color: var(--accent-dark); padding: 0; min-heigh
 button.small { min-height: 32px; padding: 0 12px; font-size: 13px; }
 
 /* ── Формы ── */
-label.field { display: flex; flex-direction: column; gap: 6px; }
+label.field, div.field { display: flex; flex-direction: column; gap: 6px; }
+.price-row { flex-wrap: nowrap; }
+.price-row input { min-width: 0; }
+.price-amount { width: 120px; flex: none; }
 input, textarea, select {
   font: inherit; color: var(--text);
   background: rgba(255, 255, 255, 0.75);
@@ -291,3 +287,164 @@ tr.clickable:hover td { background: rgba(255, 255, 255, 0.5); }
 }
 .chart-axis { display: flex; justify-content: space-between; margin: 8px 0 0 28px; font-size: 11px; color: var(--text-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── Строки списков (десктоп) ── */
+.topbar, .scrim, .save-bar, .mobile-only { display: none; }
+button.icon { width: 32px; padding: 0; }
+.cat-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.cat-title { flex: 1; }
+.cat-actions { gap: 8px; }
+.items { display: flex; flex-direction: column; }
+.item {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; gap: 16px; align-items: start;
+  padding: 12px 0; border-top: 1px solid var(--hairline); transition: opacity 0.25s var(--ease);
+}
+.item.off { opacity: 0.5; }
+.item-price { white-space: nowrap; padding-top: 2px; font-variant-numeric: lining-nums tabular-nums; }
+.item-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.item-actions .check { margin-right: 4px; }
+.hours-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hours-day { width: 120px; }
+.news-card { align-items: flex-start; gap: 16px; }
+.news-thumb { width: 96px; height: 72px; }
+.news-body { flex: 1; min-width: 240px; }
+.news-actions { justify-content: flex-end; }
+
+/* ── Телефон и узкие окна ── */
+@media (max-width: 860px) {
+  body { font-size: 15px; }
+  h1 { font-size: 31px; }
+  h2 { font-size: 23px; }
+  /* 16px в полях: иначе iOS увеличивает страницу при фокусе */
+  input, textarea, select { font-size: 16px; }
+
+  .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 30;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background: rgba(251, 247, 239, 0.82);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .topbar .logo { padding: 0; }
+  .burger { position: relative; width: 44px; min-height: 44px; padding: 0; }
+  .burger-lines, .burger-lines::before, .burger-lines::after {
+    position: absolute; left: 50%; width: 18px; height: 1.5px; margin-left: -9px;
+    background: var(--text); border-radius: 1px; content: '';
+    transition: transform 0.3s var(--ease), opacity 0.2s var(--ease);
+  }
+  .burger-lines { top: 50%; }
+  .burger-lines::before { left: 0; margin: 0; transform: translateY(-6px); }
+  .burger-lines::after { left: 0; margin: 0; transform: translateY(6px); }
+  .nav-open .burger-lines { background: transparent; }
+  .nav-open .burger-lines::before { background: var(--text); transform: rotate(45deg); }
+  .nav-open .burger-lines::after { background: var(--text); transform: rotate(-45deg); }
+  .burger-dot {
+    position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--terracotta); box-shadow: 0 0 0 2px var(--bg);
+  }
+
+  .sidebar {
+    position: fixed; z-index: 40; top: 0; bottom: 0; left: 0;
+    width: min(300px, 84vw); height: 100dvh; overflow-y: auto;
+    padding: calc(24px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+    background: rgba(251, 247, 239, 0.97);
+    box-shadow: 0 0 40px rgba(54, 43, 34, 0.18);
+    transform: translateX(-104%);
+    transition: transform 0.38s var(--ease);
+  }
+  .nav-open .sidebar { transform: none; }
+  .nav-link { padding: 12px 14px; font-size: 16px; }
+  .scrim {
+    display: block; position: fixed; inset: 0; z-index: 35;
+    background: rgba(54, 43, 34, 0.28);
+    opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease);
+  }
+  .nav-open .scrim { opacity: 1; pointer-events: auto; }
+
+  .content { padding: 20px 16px 48px; min-width: 0; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 18px; }
+  .page-head > button { width: 100%; }
+  .page-head > button[type='submit'] { display: none; }
+  .filters { flex-wrap: nowrap; }
+  .filters select { flex: 1; min-width: 0; }
+
+  .card { padding: 16px; }
+  .grid { gap: 12px; }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .stat-value { font-size: 36px; }
+
+  /* Таблицы превращаются в карточки-строки */
+  .rows-table thead { display: none; }
+  .rows-table, .rows-table tbody { display: block; }
+  .rows-table tr { display: grid; gap: 6px 10px; padding: 14px 10px; align-items: center; }
+  .rows-table tr + tr { border-top: 1px solid var(--hairline); }
+  .rows-table td { display: block; padding: 0; border: 0; min-width: 0; }
+  .fb-table tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'type date status' 'msg msg msg' 'guest guest guest';
+  }
+  .fb-type { grid-area: type; }
+  .fb-date { grid-area: date; color: var(--text-2); }
+  .fb-status { grid-area: status; }
+  .fb-msg { grid-area: msg; }
+  .fb-guest { grid-area: guest; color: var(--text-2); }
+  .staff-table tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'name role' 'email email' 'login action';
+  }
+  .st-name { grid-area: name; font-weight: 500; }
+  .st-role { grid-area: role; }
+  .st-email { grid-area: email; color: var(--text-2); overflow-wrap: anywhere; }
+  .st-login { grid-area: login; }
+  .st-action { grid-area: action; }
+  .mobile-only { display: inline; }
+
+  /* Меню: заголовок категории над кнопками, позиция — карточкой */
+  .cat-title { flex: 1 1 100%; }
+  .cat-actions { width: 100%; }
+  .cat-actions > :last-child { margin-left: auto; }
+  .item {
+    grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px 12px;
+    grid-template-areas: 'thumb info price' 'actions actions actions';
+  }
+  .item > .thumb-btn { grid-area: thumb; }
+  .item-info { grid-area: info; }
+  .item-price { grid-area: price; }
+  .item-actions { grid-area: actions; }
+
+  .hours-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px;
+    grid-template-areas: 'day day off' 'open dash close';
+    padding-top: 10px; border-top: 1px solid var(--hairline);
+  }
+  .hours-day { grid-area: day; width: auto; font-weight: 500; }
+  .hours-off { grid-area: off; justify-self: end; }
+  .hours-open { grid-area: open; min-width: 0; }
+  .hours-dash { grid-area: dash; }
+  .hours-close { grid-area: close; min-width: 0; }
+
+  .news-card { flex-direction: column; align-items: stretch; }
+  .news-thumb { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .news-body { min-width: 0; }
+  .news-actions { justify-content: flex-start; }
+
+  .save-bar {
+    display: block; position: sticky; bottom: 0; z-index: 5;
+    margin: 16px -16px 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to bottom, rgba(251, 247, 239, 0), var(--bg) 40%);
+  }
+  .save-bar button { width: 100%; min-height: 48px; }
+  .save-bar .save-msg { margin-bottom: 10px; }
+  .desktop-only { display: none; }
+
+  .modal-backdrop { padding: 12px 10px; }
+  .modal { padding: 20px 18px; border-radius: 22px; }
+  .chart-plot { margin-top: 48px; }
+  .tabs { display: grid; width: 100%; }
+  .tabs button { min-width: 0; }
+  .price-amount { width: 96px; }
+}

@@ -41,9 +41,9 @@ export function News() {
 
       <div className="stack">
         {q.data?.map((p) => (
-          <div key={p.id} className="card row" style={{ alignItems: 'flex-start', gap: 16 }}>
-            {p.imageUrl ? <img src={p.imageUrl} alt="" className="thumb" style={{ width: 96, height: 72 }} /> : null}
-            <div className="stack" style={{ gap: 6, flex: 1, minWidth: 240 }}>
+          <div key={p.id} className="card row news-card">
+            {p.imageUrl ? <img src={p.imageUrl} alt="" className="thumb news-thumb" /> : null}
+            <div className="stack news-body" style={{ gap: 6 }}>
               <div className="row">
                 <span className={`pill ${p.status === 'published' ? 'accent' : ''}`}>
                   {p.status === 'published' ? 'Опубликовано' : 'Черновик'}
@@ -57,7 +57,7 @@ export function News() {
                 {p.body.length > 220 ? `${p.body.slice(0, 220)}…` : p.body}
               </div>
             </div>
-            <div className="row" style={{ justifyContent: 'flex-end' }}>
+            <div className="row news-actions">
               <button className="ghost small" onClick={() => setEditing(p)}>
                 Редактировать
               </button>
