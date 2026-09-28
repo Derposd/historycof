@@ -1,0 +1,66 @@
+name: VPS
+
+# Установка тестового стенда на VPS заказчика по SSH.
+# Репозиторий публичный: всё, что сервер сообщает о себе, шифруется ключом,
+# производным от секрета VPS_SSH_KEY, и в логе виден только шифротекст.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'inspect — только осмотр; deploy — установка/обновление'
+        required: true
+        default: inspect
+        type: choice
+        options: [inspect, deploy]
+      host:
+        description: 'Адрес сервера'
+        required: true
+      user:
+        description: 'Пользователь SSH'
+        required: true
+        default: root
+      port:
+        description: 'Порт SSH'
+        required: true
+        default: '22'
+
+concurrency: vps
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ -z "$VPS_SSH_KEY" ]; then echo "::error::Секрет VPS_SSH_KEY не задан"; exit 1; fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/vps && chmod 600 ~/.ssh/vps
+          # Ключ шифрования отчётов: sha256 от тела приватного ключа без пробелов и переводов строк
+          REPORT_KEY=$(printf '%s' "$VPS_SSH_KEY" | tr -d ' \r\n' | sha256sum | cut -d' ' -f1)
+          echo "::add-mask::$REPORT_KEY"
+          echo "REPORT_KEY=$REPORT_KEY" >> "$GITHUB_ENV"
+          cat > ~/.ssh/config <<CFG
+          Host vps
+            HostName ${{ inputs.host }}
+            User ${{ inputs.user }}
+            Port ${{ inputs.port }}
+            IdentityFile ~/.ssh/vps
+            StrictHostKeyChecking accept-new
+            ServerAliveInterval 30
+            ConnectTimeout 20
+          CFG
+          ssh -o BatchMode=yes vps true && echo "Подключение есть"
+
+      - name: Осмотр (только чтение)
+        if: inputs.action == 'inspect'
+        run: |
+          ssh vps 'bash -s' < deploy/inspect.sh > report.txt 2>&1 || true
+          echo "Отчёт зашифрован. Строка для расшифровки:"
+          echo "REPORT_BEGIN"
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:REPORT_KEY -in report.txt | base64 -w0
+          echo
+          echo "REPORT_END"
