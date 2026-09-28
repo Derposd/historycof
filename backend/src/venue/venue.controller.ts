@@ -1,0 +1,89 @@
+import { Body, Controller, Get, Module, Put, UseGuards } from '@nestjs/common';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsLatitude,
+  IsLongitude,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+import { Roles, StaffGuard } from '../common/auth';
+import { IsoWeekday } from './hours';
+import { VenueService } from './venue.service';
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+class DayHoursDto {
+  @IsIn([1, 2, 3, 4, 5, 6, 7])
+  day: IsoWeekday;
+
+  @ValidateIf((o: DayHoursDto) => o.open !== null)
+  @Matches(HHMM)
+  open: string | null;
+
+  @ValidateIf((o: DayHoursDto) => o.close !== null)
+  @Matches(HHMM)
+  close: string | null;
+}
+
+class UpdateVenueDto {
+  @IsOptional() @IsString() @Length(1, 80) name?: string;
+  @IsOptional() @IsString() @MaxLength(200) tagline?: string;
+  @IsOptional() @IsString() @Length(1, 200) address?: string;
+  @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lat !== null) @IsLatitude() lat?: number | null;
+  @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lng !== null) @IsLongitude() lng?: number | null;
+  @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'Телефон в формате +7XXXXXXXXXX' }) phone?: string;
+  @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'WhatsApp в формате +7XXXXXXXXXX' }) whatsapp?: string;
+  @IsOptional() @Matches(/^[A-Za-z0-9._]{1,30}$/, { message: 'Instagram — имя аккаунта без @' }) instagram?: string;
+  @IsOptional() @IsString() @MaxLength(200) website?: string;
+  @IsOptional() @IsString() @MaxLength(200) legalName?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(7)
+  @ArrayMaxSize(7)
+  @ValidateNested({ each: true })
+  @Type(() => DayHoursDto)
+  hours?: DayHoursDto[];
+}
+
+@Controller('venue')
+export class VenueController {
+  constructor(private readonly venue: VenueService) {}
+
+  @Get()
+  get() {
+    return this.venue.getWithStatus();
+  }
+}
+
+@Controller('admin/venue')
+@UseGuards(StaffGuard)
+export class AdminVenueController {
+  constructor(private readonly venue: VenueService) {}
+
+  @Get()
+  get() {
+    return this.venue.get();
+  }
+
+  @Put()
+  @Roles('admin')
+  update(@Body() dto: UpdateVenueDto) {
+    return this.venue.update(dto);
+  }
+}
+
+@Module({
+  controllers: [VenueController, AdminVenueController],
+  providers: [VenueService],
+})
+export class VenueModule {}
