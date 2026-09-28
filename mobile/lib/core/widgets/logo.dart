@@ -35,7 +35,7 @@ class HcMonogram extends StatelessWidget {
   }
 }
 
-/// Логотип: монограмма + «History» и подпись «coffee house».
+/// Логотип: монограмма + «History» и подпись «coffee boutique».
 class HcLogo extends StatelessWidget {
   const HcLogo({super.key, this.size = 44, this.showSubtitle = true, this.color = HcColors.text});
 
@@ -66,7 +66,7 @@ class HcLogo extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.only(top: size * 0.06, left: 1),
                   child: Text(
-                    'coffee house',
+                    'coffee boutique',
                     style: HcType.sans(size: size * 0.24, weight: 500, color: HcColors.textSecondary, height: 1.1),
                   ),
                 ),

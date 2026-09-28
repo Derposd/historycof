@@ -322,10 +322,7 @@ class _ChipsHeader extends SliverPersistentHeaderDelegate {
       ),
       child: AnimatedSwitcher(
         duration: Motion.of(context, Motion.medium),
-        layoutBuilder: (current, previous) => Stack(
-          alignment: Alignment.centerLeft,
-          children: [...previous, ?current],
-        ),
+        layoutBuilder: (current, previous) => Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
         child: _Chips(key: ValueKey(sectionKey), categories: categories, activeId: activeId, onTap: onTap),
       ),
     );

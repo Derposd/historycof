@@ -13,7 +13,7 @@ export function Logo({ size = 40 }: { size?: number }) {
       <Monogram size={size} />
       <div>
         <div className="logo-title" style={{ fontSize: size * 0.62 }}>History</div>
-        <div className="logo-sub">coffee house · админка</div>
+        <div className="logo-sub">coffee boutique · админка</div>
       </div>
     </div>
   )

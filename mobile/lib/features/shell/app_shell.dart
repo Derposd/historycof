@@ -64,12 +64,19 @@ class _FadeBranches extends StatefulWidget {
 }
 
 class _FadeBranchesState extends State<_FadeBranches> {
-  int? _leaving;
+  /// Вкладки, которые сейчас растворяются. Множество, а не одна вкладка: при быстрых
+  /// переключениях (Главная → Меню → Бонусы) исчезновение каждой должно доиграть до конца,
+  /// иначе недорастворённая вкладка остаётся видна сквозь стекло.
+  final Set<int> _leaving = {};
 
   @override
   void didUpdateWidget(_FadeBranches old) {
     super.didUpdateWidget(old);
-    if (old.index != widget.index) _leaving = old.index;
+    if (old.index != widget.index) {
+      _leaving
+        ..add(old.index)
+        ..remove(widget.index);
+    }
   }
 
   @override
@@ -79,23 +86,26 @@ class _FadeBranchesState extends State<_FadeBranches> {
       fit: StackFit.expand,
       children: [
         for (final (i, child) in widget.children.indexed)
-          IgnorePointer(
-            ignoring: i != widget.index,
-            child: TickerMode(
-              // Уходящей вкладке оставляем анимации, иначе её растворение замрёт на полпути.
-              enabled: i == widget.index || i == _leaving,
-              child: AnimatedOpacity(
-                opacity: i == widget.index ? 1 : 0,
-                duration: d,
-                curve: Motion.curve,
-                onEnd: () {
-                  if (i == _leaving && mounted) setState(() => _leaving = null);
-                },
-                child: AnimatedSlide(
-                  offset: i == widget.index ? Offset.zero : const Offset(0, 0.012),
+          Offstage(
+            // Полностью скрытые вкладки не рисуются вовсе (состояние сохраняется).
+            offstage: i != widget.index && !_leaving.contains(i),
+            child: IgnorePointer(
+              ignoring: i != widget.index,
+              child: TickerMode(
+                enabled: i == widget.index || _leaving.contains(i),
+                child: AnimatedOpacity(
+                  opacity: i == widget.index ? 1 : 0,
                   duration: d,
                   curve: Motion.curve,
-                  child: child,
+                  onEnd: () {
+                    if (i != widget.index && _leaving.contains(i) && mounted) setState(() => _leaving.remove(i));
+                  },
+                  child: AnimatedSlide(
+                    offset: i == widget.index ? Offset.zero : const Offset(0, 0.012),
+                    duration: d,
+                    curve: Motion.curve,
+                    child: child,
+                  ),
                 ),
               ),
             ),
