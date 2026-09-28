@@ -1,0 +1,70 @@
+name: Android APK
+
+# Собирает APK на раннере GitHub (там есть Android SDK и доступ к Google Maven).
+# Готовый файл — во вкладке Actions → запуск → Artifacts.
+on:
+  push:
+    paths: ['mobile/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Адрес API (пусто — демо-сборка без сервера)'
+        required: false
+        default: ''
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: mobile } }
+    env:
+      HAS_RELEASE_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, flutter-version: 3.47.5, cache: true }
+      - run: flutter pub get
+      - run: flutter test
+
+      # Ключ подписи из секретов репозитория (если заданы). Без них — debug-подпись:
+      # APK ставится на телефон для проверки, но в Google Play его не загрузить.
+      - name: Ключ подписи
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        if: env.HAS_RELEASE_KEY == 'true'
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/upload.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Сборка
+        env:
+          API_URL: ${{ inputs.api_url || vars.API_URL }}
+        run: |
+          if [ -n "$API_URL" ]; then
+            DEFINES="--dart-define=API_URL=$API_URL"
+            NAME=history-coffee
+          else
+            DEFINES="--dart-define=DEMO=true"
+            NAME=history-coffee-demo
+          fi
+          flutter build apk --release $DEFINES
+          flutter build appbundle --release $DEFINES
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-release.apk "out/$NAME.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "out/$NAME.aab"
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: history-coffee-android
+          path: mobile/out/*
+          retention-days: 30

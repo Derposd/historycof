@@ -1,0 +1,7 @@
+# Скопируйте в key.properties (не коммитить!) и укажите свой upload-ключ.
+# Создать ключ:
+#   keytool -genkey -v -keystore ~/history-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+storeFile=/home/you/history-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=

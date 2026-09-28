@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фон бренда: светлый тёплый айвори -->
+    <color name="hc_background">#FBF7EF</color>
+    <color name="ic_launcher_background">#FBF7EF</color>
+</resources>

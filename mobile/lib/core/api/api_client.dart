@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../auth/token_store.dart';
 import '../config.dart';
 import 'api_exception.dart';
+import 'demo_interceptor.dart';
 
 /// HTTP-клиент приложения: подставляет access-токен, при 401 один раз
 /// обновляет пару через refresh-токен (с ротацией) и повторяет запрос.
@@ -14,6 +15,11 @@ class ApiClient {
   ApiClient({required this.tokens, required this.onSessionExpired, Dio? dio, String? baseUrl})
       : dio = dio ?? Dio(_options(baseUrl ?? AppConfig.apiUrl)),
         _refreshDio = Dio(_options(baseUrl ?? AppConfig.apiUrl)) {
+    if (AppConfig.demo && dio == null) {
+      final demo = DemoInterceptor();
+      this.dio.interceptors.add(demo);
+      _refreshDio.interceptors.add(demo);
+    }
     this.dio.interceptors.add(
           InterceptorsWrapper(
             onRequest: (options, handler) {

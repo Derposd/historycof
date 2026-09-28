@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_exception.dart';
+import '../../core/api/demo_interceptor.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../core/config.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/format.dart';
@@ -118,7 +120,9 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
               Text('Код из SMS', style: HcType.serif(size: 38, weight: 500)),
               const SizedBox(height: 8),
               Text(
-                'Отправили на ${formatPhone(widget.args.phone)}',
+                AppConfig.demo
+                    ? 'Демо-версия: SMS не отправляется, введите ${DemoInterceptor.demoCode}'
+                    : 'Отправили на ${formatPhone(widget.args.phone)}',
                 style: HcType.sans(color: HcColors.textSecondary),
               ),
               const SizedBox(height: 28),

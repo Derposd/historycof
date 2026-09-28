@@ -1,5 +1,8 @@
 /// Конфигурация сборки через --dart-define (см. mobile/README.md).
 abstract final class AppConfig {
+  /// Демо-режим: приложение работает без сервера на встроенных примерных данных.
+  static const demo = bool.fromEnvironment('DEMO');
+
   /// Базовый URL API. По умолчанию — backend на хост-машине из Android-эмулятора.
   static const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://10.0.2.2:3000/api/v1');
 

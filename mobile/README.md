@@ -1,6 +1,7 @@
 # History Coffee — мобильное приложение (Flutter)
 
-Android и iOS из одной кодовой базы. Экраны: новости, меню (Кухня / Бар),
+Сейчас в работе **Android**. Код общий с iOS: сборку под iPhone можно добавить
+позже без переписывания (см. раздел «iOS» ниже). Экраны: новости, меню (Кухня / Бар),
 бонусная карта с QR, контакты с индикатором «открыто сейчас», обратная связь,
 профиль.
 
@@ -20,10 +21,48 @@ Backend в dev-режиме пишет SMS-коды в лог (`SMS_PROVIDER=con
 работают на mock-клиенте iiko (`IIKO_MODE=mock`) — приложение можно
 прогнать целиком без внешних сервисов.
 
+## Android: готовый APK
+
+APK собирает GitHub Actions (`.github/workflows/android.yml`) при каждом изменении в `mobile/`:
+вкладка **Actions** → «Android APK» → последний запуск → **Artifacts** → `history-coffee-android`.
+Внутри лежат `.apk` для установки на телефон и `.aab` для Google Play.
+
+- Пока backend не развёрнут, собирается **демо-версия** (`history-coffee-demo.apk`):
+  встроенные примерные данные, вход по любому номеру с кодом **1234**.
+- Когда появится сервер, задайте переменную репозитория `API_URL`
+  (Settings → Secrets and variables → Actions → Variables) или укажите адрес при ручном
+  запуске (Run workflow). Тогда соберётся рабочая версия `history-coffee.apk`.
+
+Установка на телефон: скачать `.apk`, открыть, разрешить установку из этого источника.
+
+Локально (нужен Android SDK):
+
+```bash
+flutter build apk --release --dart-define=DEMO=true                                  # демо
+flutter build apk --release --dart-define=API_URL=https://api.historycoffee.ru/api/v1 # рабочая
+```
+
+### Ключ подписи для Google Play
+
+Без ключа релиз подписывается debug-ключом: такой APK ставится на телефон, но в Google Play
+его не загрузить. Для публикации:
+
+1. Создать upload-ключ (**хранить надёжно, потеря = проблемы с обновлениями**):
+   `keytool -genkey -v -keystore history-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+2. Локально: скопировать `android/key.properties.example` в `android/key.properties` и заполнить.
+3. В CI: добавить секреты репозитория `ANDROID_KEYSTORE_BASE64` (`base64 -w0 history-upload.jks`),
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+4. В Google Play Console включить Play App Signing и загрузить `.aab`.
+
+Идентификатор приложения: `ru.historycoffee.app`. После первой публикации его менять нельзя.
+
+Иконка и сплэш — временные (перо из логотипа на айвори), заменить после получения векторного логотипа.
+
 ## Параметры сборки (`--dart-define`)
 
 | Переменная | Назначение |
 |---|---|
+| `DEMO` | `true` — демо-версия без сервера |
 | `API_URL` | Базовый URL API, например `https://api.historycoffee.ru/api/v1` |
 | `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_SENDER_ID` | Общие параметры проекта Firebase |
 | `FIREBASE_ANDROID_APP_ID`, `FIREBASE_IOS_APP_ID` | App ID приложений в Firebase |
@@ -42,7 +81,7 @@ flutter build appbundle --release \
   --dart-define=FIREBASE_SENDER_ID=... --dart-define=FIREBASE_ANDROID_APP_ID=...
 ```
 
-## iOS: перед первой сборкой
+## iOS (позже): перед первой сборкой
 
 1. В Xcode: Signing & Capabilities → добавить **Push Notifications** и
    **Background Modes → Remote notifications** (в `Info.plist` режим уже прописан).

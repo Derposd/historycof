@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/auth/guest_profile.dart';
+import '../../core/config.dart';
 import '../../core/push/push_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
@@ -28,6 +29,16 @@ class ProfileScreen extends ConsumerWidget {
         padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 110),
         children: [
           const ScreenTitle('Профиль', overline: 'History Coffee'),
+          if (AppConfig.demo)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+              child: SoftCard(
+                child: Text(
+                  'Демо-версия: сервер кофейни ещё не подключён, данные примерные и не сохраняются.',
+                  style: HcType.sans(size: 13.5, color: HcColors.textSecondary),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: profile == null ? _SignInCard() : _ProfileCard(profile: profile),
