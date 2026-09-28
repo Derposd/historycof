@@ -1,0 +1,441 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
+import { api } from '../api'
+import { ErrorBox, ImageField, Loading, Modal } from '../components/ui'
+import { errorText } from '../format'
+import { BADGE_LABELS, type MenuBadge, type MenuCategory, type MenuItem, type MenuPrice, type MenuSection } from '../types'
+
+export function Menu() {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['menu'], queryFn: () => api<MenuSection[]>('/admin/menu') })
+  const [sectionId, setSectionId] = useState<string | null>(null)
+  const [itemEdit, setItemEdit] = useState<{ item: MenuItem | null; categoryId: string } | null>(null)
+  const [catEdit, setCatEdit] = useState<{ category: MenuCategory | null; sectionId: string } | null>(null)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['menu'] })
+
+  const patchItem = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<MenuItem> }) =>
+      api(`/admin/menu/items/${id}`, { method: 'PATCH', json: data }),
+    onSuccess: invalidate,
+  })
+  const reorder = useMutation({
+    mutationFn: ({ kind, ids }: { kind: 'categories' | 'items'; ids: string[] }) =>
+      api(`/admin/menu/reorder/${kind}`, { method: 'PUT', json: { ids } }),
+    onSuccess: invalidate,
+  })
+
+  if (q.isPending) return <Loading />
+  if (q.isError) return <ErrorBox error={q.error} />
+
+  const sections = q.data
+  const section = sections.find((s) => s.id === sectionId) ?? sections[0]
+
+  function move<T extends { id: string }>(list: T[], index: number, dir: -1 | 1): string[] {
+    const ids = list.map((x) => x.id)
+    const j = index + dir
+    if (j < 0 || j >= ids.length) return ids
+    ;[ids[index], ids[j]] = [ids[j], ids[index]]
+    return ids
+  }
+
+  return (
+    <div>
+      <div className="page-head">
+        <div>
+          <div className="caps">Меню в приложении</div>
+          <h1>Меню</h1>
+        </div>
+        {section && (
+          <button className="ghost" onClick={() => setCatEdit({ category: null, sectionId: section.id })}>
+            Добавить категорию
+          </button>
+        )}
+      </div>
+
+      {sections.length === 0 ? (
+        <div className="card empty">
+          Разделов нет. Запустите <code>npm run db:seed</code> на backend, чтобы создать «Кухню» и «Бар».
+        </div>
+      ) : (
+        <div className="tabs" style={{ marginBottom: 20 }}>
+          {sections.map((s) => (
+            <button key={s.id} className={s.id === section?.id ? 'active' : ''} onClick={() => setSectionId(s.id)}>
+              {s.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="stack" style={{ gap: 20 }}>
+        {section?.categories.map((c, ci) => (
+          <div key={c.id} className="card">
+            <div className="row" style={{ marginBottom: 12 }}>
+              <h2>{c.title}</h2>
+              {!c.visible && <span className="pill">Скрыта</span>}
+              <span className="spacer" />
+              <button
+                className="ghost small"
+                aria-label="Выше"
+                disabled={ci === 0}
+                onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, -1) })}
+              >
+                ↑
+              </button>
+              <button
+                className="ghost small"
+                aria-label="Ниже"
+                disabled={ci === section.categories.length - 1}
+                onClick={() => reorder.mutate({ kind: 'categories', ids: move(section.categories, ci, 1) })}
+              >
+                ↓
+              </button>
+              <button className="ghost small" onClick={() => setCatEdit({ category: c, sectionId: section.id })}>
+                Настроить
+              </button>
+              <button className="small" onClick={() => setItemEdit({ item: null, categoryId: c.id })}>
+                + Позиция
+              </button>
+            </div>
+            {c.items.length === 0 ? (
+              <div className="muted small">В категории пока нет позиций — в приложении она не показывается</div>
+            ) : (
+              <table>
+                <tbody>
+                  {c.items.map((i, ii) => (
+                    <tr key={i.id} style={{ opacity: i.available ? 1 : 0.5 }}>
+                      <td style={{ width: 64 }}>
+                        {i.imageUrl ? <img src={i.imageUrl} alt="" className="thumb" /> : <div className="thumb" />}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 500 }}>{i.title}</div>
+                        {i.description && <div className="muted small">{i.description}</div>}
+                        <div className="row" style={{ marginTop: 6, gap: 6 }}>
+                          {i.badges.map((b) => (
+                            <span key={b} className={`pill ${b === 'story' ? 'outline' : b === 'team_choice' ? 'accent' : 'gold'}`}>
+                              {BADGE_LABELS[b]}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {i.prices.map((p) => `${p.label ? `${p.label} ` : ''}${p.amount} ₽`).join(' / ') || '—'}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        <label className="check small" style={{ marginRight: 10 }}>
+                          <input
+                            type="checkbox"
+                            checked={i.available}
+                            onChange={(e) => patchItem.mutate({ id: i.id, data: { available: e.target.checked } })}
+                          />
+                          В меню
+                        </label>
+                        <button
+                          className="ghost small"
+                          aria-label="Выше"
+                          disabled={ii === 0}
+                          onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, -1) })}
+                        >
+                          ↑
+                        </button>{' '}
+                        <button
+                          className="ghost small"
+                          aria-label="Ниже"
+                          disabled={ii === c.items.length - 1}
+                          onClick={() => reorder.mutate({ kind: 'items', ids: move(c.items, ii, 1) })}
+                        >
+                          ↓
+                        </button>{' '}
+                        <button className="ghost small" onClick={() => setItemEdit({ item: i, categoryId: c.id })}>
+                          Изменить
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="muted small" style={{ marginTop: 24 }}>
+        В приложении под меню выводится: «Цены и состав блюд носят информационный характер, актуальное меню — в
+        кофейне».
+      </p>
+
+      {itemEdit && (
+        <ItemEditor
+          item={itemEdit.item}
+          categoryId={itemEdit.categoryId}
+          categories={section?.categories ?? []}
+          onClose={() => setItemEdit(null)}
+          onSaved={() => {
+            setItemEdit(null)
+            void invalidate()
+          }}
+        />
+      )}
+      {catEdit && (
+        <CategoryEditor
+          category={catEdit.category}
+          sectionId={catEdit.sectionId}
+          onClose={() => setCatEdit(null)}
+          onSaved={() => {
+            setCatEdit(null)
+            void invalidate()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function CategoryEditor({
+  category,
+  sectionId,
+  onClose,
+  onSaved,
+}: {
+  category: MenuCategory | null
+  sectionId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [title, setTitle] = useState(category?.title ?? '')
+  const [visible, setVisible] = useState(category?.visible ?? true)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      if (category) await api(`/admin/menu/categories/${category.id}`, { method: 'PATCH', json: { title, visible } })
+      else await api('/admin/menu/categories', { method: 'POST', json: { sectionId, title, visible, sort: 999 } })
+      onSaved()
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  async function remove() {
+    if (!category || !confirm(`Удалить категорию «${category.title}» вместе со всеми позициями?`)) return
+    try {
+      await api(`/admin/menu/categories/${category.id}`, { method: 'DELETE' })
+      onSaved()
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  return (
+    <Modal title={category ? 'Категория' : 'Новая категория'} onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <label className="field">
+          <span className="caps">Название</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} required />
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} />
+          Показывать в приложении
+        </label>
+        {error && <div className="error">{error}</div>}
+        <div className="row">
+          {category && (
+            <button type="button" className="danger" onClick={remove}>
+              Удалить
+            </button>
+          )}
+          <span className="spacer" />
+          <button type="button" className="ghost" onClick={onClose}>
+            Отмена
+          </button>
+          <button type="submit">Сохранить</button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function ItemEditor({
+  item,
+  categoryId,
+  categories,
+  onClose,
+  onSaved,
+}: {
+  item: MenuItem | null
+  categoryId: string
+  categories: MenuCategory[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState({
+    categoryId: item?.categoryId ?? categoryId,
+    title: item?.title ?? '',
+    description: item?.description ?? '',
+    portion: item?.portion ?? '',
+    imageUrl: item?.imageUrl ?? null,
+    story: item?.story ?? '',
+    available: item?.available ?? true,
+  })
+  const [prices, setPrices] = useState<MenuPrice[]>(item?.prices.length ? item.prices : [{ label: '', amount: 0 }])
+  const [badges, setBadges] = useState<MenuBadge[]>(item?.badges ?? [])
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (badges.includes('story') && !form.story.trim()) {
+      setError('Для бейджа «Блюдо с историей» добавьте легенду')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const payload = {
+      ...form,
+      description: form.description || null,
+      portion: form.portion || null,
+      story: form.story || null,
+      prices: prices.filter((p) => p.amount > 0),
+      badges,
+    }
+    try {
+      if (item) await api(`/admin/menu/items/${item.id}`, { method: 'PATCH', json: payload })
+      else await api('/admin/menu/items', { method: 'POST', json: { ...payload, sort: 999 } })
+      onSaved()
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!item || !confirm(`Удалить «${item.title}»?`)) return
+    await api(`/admin/menu/items/${item.id}`, { method: 'DELETE' })
+    onSaved()
+  }
+
+  return (
+    <Modal title={item ? 'Позиция меню' : 'Новая позиция'} onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <div className="grid grid-2" style={{ gap: 12 }}>
+          <label className="field">
+            <span className="caps">Название</span>
+            <input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={120} required />
+          </label>
+          <label className="field">
+            <span className="caps">Категория</span>
+            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="field">
+          <span className="caps">Состав / описание</span>
+          <textarea
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            rows={3}
+            maxLength={1000}
+            style={{ minHeight: 80 }}
+          />
+        </label>
+        <label className="field">
+          <span className="caps">Выход</span>
+          <input value={form.portion} onChange={(e) => set('portion', e.target.value)} placeholder="250 г / 300 мл" maxLength={40} />
+        </label>
+
+        <div className="field">
+          <span className="caps">Цены</span>
+          <span className="muted small">
+            Несколько вариантов — например, капучино S 270 / L 290. Для одного варианта подпись можно не заполнять.
+          </span>
+          {prices.map((p, i) => (
+            <div key={i} className="row">
+              <input
+                placeholder="Подпись (S, L, 250 мл)"
+                value={p.label}
+                maxLength={30}
+                onChange={(e) => setPrices(prices.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                placeholder="₽"
+                value={p.amount || ''}
+                onChange={(e) => setPrices(prices.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))}
+                style={{ width: 120 }}
+              />
+              {prices.length > 1 && (
+                <button type="button" className="ghost small" onClick={() => setPrices(prices.filter((_, j) => j !== i))}>
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          {prices.length < 4 && (
+            <button type="button" className="link" style={{ alignSelf: 'flex-start' }} onClick={() => setPrices([...prices, { label: '', amount: 0 }])}>
+              + вариант цены
+            </button>
+          )}
+        </div>
+
+        <div className="field">
+          <span className="caps">Бейджи</span>
+          <div className="row">
+            {(Object.keys(BADGE_LABELS) as MenuBadge[]).map((b) => (
+              <label key={b} className="check">
+                <input
+                  type="checkbox"
+                  checked={badges.includes(b)}
+                  onChange={(e) => setBadges(e.target.checked ? [...badges, b] : badges.filter((x) => x !== b))}
+                />
+                {BADGE_LABELS[b]}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {badges.includes('story') && (
+          <label className="field">
+            <span className="caps">Легенда «Блюда с историей»</span>
+            <textarea value={form.story} onChange={(e) => set('story', e.target.value)} rows={3} maxLength={2000} style={{ minHeight: 80 }} />
+          </label>
+        )}
+
+        <div className="field">
+          <span className="caps">Фото</span>
+          <ImageField value={form.imageUrl} onChange={(u) => set('imageUrl', u)} folder="menu" />
+        </div>
+
+        <label className="check">
+          <input type="checkbox" checked={form.available} onChange={(e) => set('available', e.target.checked)} />
+          Показывать в приложении
+        </label>
+
+        {error && <div className="error">{error}</div>}
+        <div className="row">
+          {item && (
+            <button type="button" className="danger" onClick={remove}>
+              Удалить
+            </button>
+          )}
+          <span className="spacer" />
+          <button type="button" className="ghost" onClick={onClose}>
+            Отмена
+          </button>
+          <button type="submit" disabled={busy}>
+            {busy ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
