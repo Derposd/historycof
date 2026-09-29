@@ -14,6 +14,10 @@ on:
         description: 'Адрес API (пусто — демо-сборка без сервера)'
         required: false
         default: ''
+      snapshot:
+        description: 'Снимок версии: имя тега (например v1.0-2026-09-29) — постоянный релиз с тестовой и демо-сборкой'
+        required: false
+        default: ''
 
 concurrency: android-${{ github.ref }}
 
@@ -55,7 +59,7 @@ jobs:
       - name: Сборка
         env:
           API_URL: ${{ inputs.api_url || vars.API_URL }}
-          IS_TAG: ${{ github.ref_type == 'tag' }}
+          IS_TAG: ${{ github.ref_type == 'tag' || inputs.snapshot != '' }}
         run: |
           mkdir -p out
           # build <имя> <dart-define...>: универсальный APK, лёгкий arm64 и AAB для Google Play
@@ -90,7 +94,7 @@ jobs:
 
       # Рабочая тестовая сборка (с адресом сервера) — в отдельный пре-релиз.
       - name: Опубликовать тестовый APK
-        if: ${{ github.ref_type != 'tag' && (inputs.api_url || vars.API_URL) }}
+        if: ${{ github.ref_type != 'tag' && !inputs.snapshot && (inputs.api_url || vars.API_URL) }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -104,7 +108,7 @@ jobs:
       # Демо-сборка (без сервера) публикуется в пре-релиз с постоянной ссылкой —
       # её можно открыть с телефона без входа в GitHub.
       - name: Опубликовать демо-APK
-        if: ${{ github.ref_type != 'tag' && !(inputs.api_url || vars.API_URL) }}
+        if: ${{ github.ref_type != 'tag' && !inputs.snapshot && !(inputs.api_url || vars.API_URL) }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -117,12 +121,15 @@ jobs:
 
       # Снимок версии: постоянный релиз под тегом, новые сборки его не перезаписывают.
       - name: Опубликовать снимок версии
-        if: ${{ github.ref_type == 'tag' }}
+        if: ${{ github.ref_type == 'tag' || inputs.snapshot != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.snapshot || github.ref_name }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then echo "Релиз $GITHUB_REF_NAME уже есть"; exit 0; fi
-          gh release create "$GITHUB_REF_NAME" out/* --verify-tag \
-            --title "History Coffee $GITHUB_REF_NAME — снимок версии" \
-            --notes "Сохранённая версия приложения из ${GITHUB_SHA::7}. history-coffee*.apk — подключена к тестовому стенду, history-coffee-demo*.apk — демо без сервера, .aab — для Google Play. Вернуть стенд к этой версии: workflow VPS → deploy, в поле ветки выбрать тег $GITHUB_REF_NAME."
+          if ! [[ "$TAG" =~ ^v[A-Za-z0-9._-]+$ ]]; then echo "::error::Имя снимка должно начинаться с v"; exit 1; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Релиз $TAG уже есть"; exit 0; fi
+          # Тег создаётся вместе с релизом на текущем коммите
+          gh release create "$TAG" out/* --target "$GITHUB_SHA" \
+            --title "History Coffee $TAG — снимок версии" \
+            --notes "Сохранённая версия приложения из ${GITHUB_SHA::7}. history-coffee*.apk — подключена к тестовому стенду, history-coffee-demo*.apk — демо без сервера, .aab — для Google Play. Вернуть стенд к этой версии: workflow VPS → deploy, в поле ветки выбрать тег $TAG."
