@@ -2,8 +2,11 @@ name: Android APK
 
 # Собирает APK на раннере GitHub (там есть Android SDK и доступ к Google Maven).
 # Готовый файл — во вкладке Actions → запуск → Artifacts.
+# Тег версии (v*) — постоянный релиз с тестовой и демо-сборкой: к нему всегда можно вернуться.
 on:
   push:
+    branches: ['**']
+    tags: ['v*']
     paths: ['mobile/**', '.github/workflows/android.yml']
   workflow_dispatch:
     inputs:
@@ -11,6 +14,8 @@ on:
         description: 'Адрес API (пусто — демо-сборка без сервера)'
         required: false
         default: ''
+
+concurrency: android-${{ github.ref }}
 
 jobs:
   apk:
@@ -50,25 +55,31 @@ jobs:
       - name: Сборка
         env:
           API_URL: ${{ inputs.api_url || vars.API_URL }}
+          IS_TAG: ${{ github.ref_type == 'tag' }}
         run: |
+          mkdir -p out
+          # build <имя> <dart-define...>: универсальный APK, лёгкий arm64 и AAB для Google Play
+          build() {
+            local name=$1; shift
+            flutter build apk --release "$@"
+            cp build/app/outputs/flutter-apk/app-release.apk "out/$name.apk"
+            # Лёгкий APK только для arm64 — подходит почти всем современным телефонам
+            flutter build apk --release --split-per-abi --target-platform android-arm64 "$@"
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "out/$name-arm64.apk"
+            flutter build appbundle --release "$@"
+            cp build/app/outputs/bundle/release/app-release.aab "out/$name.aab"
+          }
+          # Для тега собираем обе версии; адрес тестового стенда — по умолчанию
+          if [ "$IS_TAG" = true ] && [ -z "$API_URL" ]; then API_URL=http://168.113.210.120:8090/api/v1; fi
           if [ -n "$API_URL" ]; then
-            DEFINES="--dart-define=API_URL=$API_URL"
-            NAME=history-coffee
             # Тестовый стенд без HTTPS: разрешаем http только в такой сборке
             case "$API_URL" in http://*) export ALLOW_CLEARTEXT=true ;; esac
-          else
-            DEFINES="--dart-define=DEMO=true"
-            NAME=history-coffee-demo
+            build history-coffee "--dart-define=API_URL=$API_URL"
+            unset ALLOW_CLEARTEXT
           fi
-          flutter build apk --release $DEFINES
-          cp build/app/outputs/flutter-apk/app-release.apk /tmp/universal.apk
-          # Лёгкий APK только для arm64 — подходит почти всем современным телефонам
-          flutter build apk --release --split-per-abi --target-platform android-arm64 $DEFINES
-          flutter build appbundle --release $DEFINES
-          mkdir -p out
-          cp /tmp/universal.apk "out/$NAME.apk"
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "out/$NAME-arm64.apk"
-          cp build/app/outputs/bundle/release/app-release.aab "out/$NAME.aab"
+          if [ -z "$API_URL" ] || [ "$IS_TAG" = true ]; then
+            build history-coffee-demo --dart-define=DEMO=true
+          fi
           ls -la out
 
       - uses: actions/upload-artifact@v4
@@ -79,7 +90,7 @@ jobs:
 
       # Рабочая тестовая сборка (с адресом сервера) — в отдельный пре-релиз.
       - name: Опубликовать тестовый APK
-        if: ${{ inputs.api_url || vars.API_URL }}
+        if: ${{ github.ref_type != 'tag' && (inputs.api_url || vars.API_URL) }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -93,7 +104,7 @@ jobs:
       # Демо-сборка (без сервера) публикуется в пре-релиз с постоянной ссылкой —
       # её можно открыть с телефона без входа в GitHub.
       - name: Опубликовать демо-APK
-        if: ${{ !(inputs.api_url || vars.API_URL) }}
+        if: ${{ github.ref_type != 'tag' && !(inputs.api_url || vars.API_URL) }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -103,3 +114,15 @@ jobs:
             --prerelease --target "$GITHUB_SHA" \
             --title "History Coffee — демо для Android" \
             --notes "Демо-версия без сервера: примерные данные, вход по любому номеру с кодом 1234. Сборка из ${GITHUB_SHA::7}."
+
+      # Снимок версии: постоянный релиз под тегом, новые сборки его не перезаписывают.
+      - name: Опубликовать снимок версии
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then echo "Релиз $GITHUB_REF_NAME уже есть"; exit 0; fi
+          gh release create "$GITHUB_REF_NAME" out/* --verify-tag \
+            --title "History Coffee $GITHUB_REF_NAME — снимок версии" \
+            --notes "Сохранённая версия приложения из ${GITHUB_SHA::7}. history-coffee*.apk — подключена к тестовому стенду, history-coffee-demo*.apk — демо без сервера, .aab — для Google Play. Вернуть стенд к этой версии: workflow VPS → deploy, в поле ветки выбрать тег $GITHUB_REF_NAME."

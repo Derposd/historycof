@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'inspect — только осмотр; deploy — установка/обновление; check — проверка стенда снаружи'
+        description: 'inspect — осмотр; deploy — установка/обновление; check — проверка снаружи; backup — копия базы и фото; restore — вернуть копию'
         required: true
         default: inspect
         type: choice
-        options: [inspect, deploy, check]
+        options: [inspect, deploy, check, backup, restore]
       host:
         description: 'Адрес сервера'
         required: true
@@ -23,6 +23,10 @@ on:
         description: 'Порт SSH'
         required: true
         default: '22'
+      backup:
+        description: 'backup — метка копии (необязательно); restore — имя копии из списка'
+        required: false
+        default: ''
 
 concurrency: vps
 
@@ -81,7 +85,22 @@ jobs:
           openssl enc -d -aes-256-cbc -pbkdf2 -pass env:REPORT_KEY -in deploy/secrets.env.enc -out /tmp/hc-secrets.env
           scp -q /tmp/hc-images.tar.gz /tmp/hc-release.tgz /tmp/hc-secrets.env deploy/server-deploy.sh vps:/tmp/
           rm -f /tmp/hc-secrets.env
-          ssh vps "chmod 600 /tmp/hc-secrets.env && mv /tmp/server-deploy.sh /tmp/hc-deploy.sh && HC_HOST='${{ inputs.host }}' bash /tmp/hc-deploy.sh; code=\$?; rm -f /tmp/hc-deploy.sh; exit \$code"
+          ssh vps "chmod 600 /tmp/hc-secrets.env && mv /tmp/server-deploy.sh /tmp/hc-deploy.sh && HC_HOST='${{ inputs.host }}' HC_REV='${GITHUB_SHA::7} ${GITHUB_REF_NAME}' bash /tmp/hc-deploy.sh; code=\$?; rm -f /tmp/hc-deploy.sh; exit \$code"
+
+      - name: Резервная копия / восстановление
+        if: inputs.action == 'backup' || inputs.action == 'restore'
+        env:
+          NAME: ${{ inputs.backup }}
+        run: |
+          # Имя копии попадает в команду на сервере — пропускаем только безопасные символы
+          if [ -n "$NAME" ] && ! [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]]; then echo "::error::Недопустимое имя копии"; exit 1; fi
+          # Скрипт копируем файлом, а не через stdin: docker compose exec читает stdin
+          scp -q deploy/server-backup.sh vps:/tmp/hc-backup.sh
+          if [ "${{ inputs.action }}" = restore ] && [ -z "$NAME" ]; then
+            ssh vps 'bash /tmp/hc-backup.sh list; rm -f /tmp/hc-backup.sh'
+            echo "::error::Укажите имя копии из списка выше"; exit 1
+          fi
+          ssh vps "bash /tmp/hc-backup.sh ${{ inputs.action }} $NAME; code=\$?; rm -f /tmp/hc-backup.sh; exit \$code"
 
       - name: Проверка стенда снаружи
         if: inputs.action == 'deploy' || inputs.action == 'check'

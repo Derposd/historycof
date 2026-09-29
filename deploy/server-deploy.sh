@@ -9,8 +9,16 @@ command -v docker >/dev/null || { echo "STOP: Docker не установлен �
 docker compose version >/dev/null 2>&1 || { echo "STOP: нет плагина docker compose"; exit 3; }
 
 mkdir -p "$APP"
+
+# Перед обновлением — копия базы и фото (откат: workflow VPS, action=restore)
+if [ -f "$APP/src/deploy/server-backup.sh" ] && docker compose -p historycoffee ps -q backend 2>/dev/null | grep -q .; then
+  echo "== копия перед обновлением"
+  bash "$APP/src/deploy/server-backup.sh" backup before-deploy | grep '^BACKUP' || echo "предупреждение: копию снять не удалось"
+fi
+
 rm -rf "$APP/src.new" && mkdir "$APP/src.new"
 tar xzf /tmp/hc-release.tgz -C "$APP/src.new"
+echo "${HC_REV:-?}" > "$APP/src.new/REVISION"
 [ -d "$APP/src" ] && mv "$APP/src" "$APP/src.old"
 mv "$APP/src.new" "$APP/src"
 rm -rf "$APP/src.old"

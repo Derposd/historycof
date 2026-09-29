@@ -65,7 +65,8 @@ cd mobile && flutter test tool/screenshots_test.dart --dart-define=DEMO=true --u
 
 **Как выкладывать** — только через workflow `VPS` (`.github/workflows/vps.yml`, workflow_dispatch),
 запуск через GitHub MCP `actions_run_trigger`:
-`inputs: {action: deploy|check|inspect, host: 168.113.210.120, user: root, port: "22"}`, ref — ветка выше.
+`inputs: {action: deploy|check|inspect|backup|restore, host: 168.113.210.120, user: root, port: "22", backup: ""}`,
+ref — ветка выше (или тег версии — тогда выкладывается именно она).
 - `deploy` собирает образы на раннере, копирует на сервер, `deploy/server-deploy.sh` поднимает
   compose-проект `historycoffee`, затем `deploy/smoke.sh` проверяет стенд снаружи
   (админ, оба клиента, обращение видно в админке) и печатает статусы соседних контейнеров.
@@ -74,6 +75,16 @@ cd mobile && flutter test tool/screenshots_test.dart --dart-define=DEMO=true --u
   (sha256 приватного ключа без пробелов). Сам приватный ключ есть только в секретах GitHub —
   в новой сессии расшифровать отчёт/секреты нельзя, и это нормально: deploy и check работают
   без этого. Если нужно поменять секреты стенда — спроси пользователя, как поступить.
+
+**Резервные копии и откат** (`deploy/server-backup.sh`):
+- Каждый `deploy` сам снимает копию базы и фото (`…-before-deploy`) в /opt/history-coffee/backups
+  (хранятся последние 15, в каждой — `revision`: коммит и ветка/тег, с которых стенд был выложен).
+- `action: backup` (`backup: <метка>`) — копия вручную; `action: restore` без имени — список копий,
+  с `backup: <имя>` — вернуть базу и фото (перед этим снимется `…-before-restore`).
+- Откат кода: `deploy` с ref = тег версии. Откат данных: `restore`. Обычно нужно и то, и другое.
+- Снимки версий — теги `v*`: при пуше тега android.yml собирает тестовый и демо-APK + AAB
+  и публикует постоянный релиз под этим тегом (android-test/android-demo он не трогает).
+  Текущий снимок: **`v1.0-2026-09-29`** (всё, что сделано к 29.09.2026).
 
 **Ни в коем случае не сломать соседнее приложение на VPS** (lms-prod: caddy на 80/443,
 backend 127.0.0.1:8080, Postgres 17, каталог /opt/lms). Наш стенд: /opt/history-coffee,
