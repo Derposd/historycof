@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -267,16 +268,7 @@ class _SentView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.6, end: 1),
-                duration: Motion.of(context, Motion.slow),
-                curve: Curves.elasticOut,
-                builder: (_, v, child) => Transform.scale(scale: v, child: child),
-                child: IconTile(
-                  type == FeedbackType.thanks ? Icons.favorite_border_rounded : Icons.check_rounded,
-                  size: 64,
-                ),
-              ),
+              _SuccessMark(heart: type == FeedbackType.thanks),
               const SizedBox(height: HcSpace.l),
               Text(
                 type == FeedbackType.thanks ? 'Спасибо, это очень приятно!' : 'Спасибо, что рассказали',
@@ -311,4 +303,127 @@ class _SentView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Отметка «отправлено»: кольцо прорисовывается линией, внутри рисуется галочка
+/// (или «бьётся» сердце для благодарности), от кольца расходится мягкая волна.
+class _SuccessMark extends StatefulWidget {
+  const _SuccessMark({required this.heart});
+
+  final bool heart;
+
+  @override
+  State<_SuccessMark> createState() => _SuccessMarkState();
+}
+
+class _SuccessMarkState extends State<_SuccessMark> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (Motion.reduced(context)) {
+      _c.value = 1;
+    } else if (_c.value == 0 && !_c.isAnimating) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 88,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+          final heart = Curves.elasticOut.transform(((t - 0.35) / 0.65).clamp(0, 1));
+          return CustomPaint(
+            painter: _SuccessPainter(t, drawCheck: !widget.heart),
+            child: widget.heart
+                ? Center(
+                    child: Transform.scale(
+                      scale: heart,
+                      child: const Icon(Icons.favorite_rounded, size: 34, color: HcColors.terracotta),
+                    ),
+                  )
+                : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SuccessPainter extends CustomPainter {
+  _SuccessPainter(this.t, {required this.drawCheck});
+
+  final double t;
+  final bool drawCheck;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.width / 2 - 12;
+    final ring = Curves.easeInOutCubic.transform((t / 0.45).clamp(0, 1));
+    final check = Curves.easeOutCubic.transform(((t - 0.4) / 0.35).clamp(0, 1));
+    final wave = ((t - 0.55) / 0.45).clamp(0.0, 1.0);
+
+    // Волна
+    if (wave > 0 && wave < 1) {
+      canvas.drawCircle(
+        c,
+        r + 12 * Curves.easeOut.transform(wave),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = HcColors.accent.withValues(alpha: 0.45 * (1 - wave)),
+      );
+    }
+    // Мягкая заливка
+    canvas.drawCircle(c, r, Paint()..color = HcColors.accentDark.withValues(alpha: 0.10 * ring));
+    // Кольцо
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: r),
+      -math.pi / 2,
+      2 * math.pi * ring,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..color = HcColors.accentDark,
+    );
+    if (!drawCheck || check <= 0) return;
+    // Галочка: два отрезка, второй начинается, когда закончился первый
+    final a = c + Offset(-r * 0.36, r * 0.02);
+    final b = c + Offset(-r * 0.08, r * 0.30);
+    final e = c + Offset(r * 0.40, -r * 0.26);
+    final path = Path()..moveTo(a.dx, a.dy);
+    final k1 = (check / 0.4).clamp(0.0, 1.0);
+    final p1 = Offset.lerp(a, b, k1)!;
+    path.lineTo(p1.dx, p1.dy);
+    if (check > 0.4) {
+      final p2 = Offset.lerp(b, e, ((check - 0.4) / 0.6).clamp(0.0, 1.0))!;
+      path.lineTo(p2.dx, p2.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.6
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = HcColors.accentDark,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SuccessPainter old) => old.t != t || old.drawCheck != drawCheck;
 }

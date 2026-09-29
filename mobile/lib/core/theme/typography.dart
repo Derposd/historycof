@@ -15,11 +15,15 @@ abstract final class HcType {
     double height = 1.15,
     double letterSpacing = 0,
     bool italic = false,
+    bool tabular = false,
   }) => TextStyle(
     fontFamily: serifFamily,
     fontSize: size,
     fontWeight: _weight(weight),
     fontVariations: [FontVariation('wght', weight.clamp(300, 700).toDouble())],
+    // Ровные цифры: у Cormorant по умолчанию «старинные», где 1 похожа на I, а 150 читается как «I50».
+    // [tabular] — одинаковая ширина цифр, чтобы бегущие числа не дрожали.
+    fontFeatures: [const FontFeature.liningFigures(), if (tabular) const FontFeature.tabularFigures()],
     fontStyle: italic ? FontStyle.italic : FontStyle.normal,
     color: color,
     height: height,

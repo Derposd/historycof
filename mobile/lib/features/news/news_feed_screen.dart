@@ -115,7 +115,7 @@ class _Header extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const HcLogo(size: 44),
+            const HcLogo(size: 44, animate: true),
             if (tagline.isNotEmpty) ...[
               const SizedBox(height: HcSpace.xl),
               Text(tagline, style: HcType.serif(size: 30, weight: 500, height: 1.1)),

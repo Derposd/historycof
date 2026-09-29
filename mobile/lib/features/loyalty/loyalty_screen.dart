@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:barcode_widget/barcode_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,117 +161,128 @@ class LoyaltyCardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Обрезаем по скруглению, чтобы цветные пятна не выходили за углы карты.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(_radius),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(_radius),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFC3CBAA), Color(0xFFEBDDB4), Color(0xFFE2BFA9)],
+    return _TiltSheen(
+      builder: (light) => ClipRRect(
+        borderRadius: BorderRadius.circular(_radius),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(_radius),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFC3CBAA), Color(0xFFEBDDB4), Color(0xFFE2BFA9)],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(right: -30, top: -40, child: _blob(170, HcColors.gold)),
-          Positioned(left: -50, bottom: -40, child: _blob(190, HcColors.accentDark.withValues(alpha: 0.5))),
-          Glass(
-            radius: _radius,
-            blur: 26,
-            fill: const Color(0x8CFFFFFF),
-            padding: const EdgeInsets.all(HcSpace.card),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const HcLogo(size: 30, showSubtitle: false),
-                    const Spacer(),
-                    if (summary.guestName != null && summary.guestName!.isNotEmpty)
-                      SectionLabel(summary.guestName!, color: HcColors.text),
-                  ],
-                ),
-                const SizedBox(height: HcSpace.xl),
-                const SectionLabel('Баланс', color: HcColors.text),
-                Semantics(
-                  label: 'Баланс ${summary.balance} ${pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов')}',
-                  excludeSemantics: true,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: summary.balance.toDouble()),
-                    duration: Motion.of(context, const Duration(milliseconds: 900)),
-                    curve: Motion.curve,
-                    builder: (context, v, _) => Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(formatNumber(v.round()), style: HcType.serif(size: 56, weight: 600, height: 1.05)),
-                        const SizedBox(width: HcSpace.s),
-                        Text(
-                          pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов'),
-                          style: HcType.sans(size: 16, weight: 500, color: HcColors.text),
-                        ),
-                      ],
+            Positioned(right: -30, top: -40, child: _blob(170, HcColors.gold)),
+            Positioned(left: -50, bottom: -40, child: _blob(190, HcColors.accentDark.withValues(alpha: 0.5))),
+            // Свет под матовым стеклом: блик и отсвет пальца размываются стеклом
+            // и не ложатся поверх QR-кода (иначе касса могла бы не считать код).
+            Positioned.fill(child: light),
+            Glass(
+              radius: _radius,
+              blur: 26,
+              fill: const Color(0x8CFFFFFF),
+              padding: const EdgeInsets.all(HcSpace.card),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const HcLogo(size: 30, showSubtitle: false),
+                      const Spacer(),
+                      if (summary.guestName != null && summary.guestName!.isNotEmpty)
+                        SectionLabel(summary.guestName!, color: HcColors.text),
+                    ],
+                  ),
+                  const SizedBox(height: HcSpace.xl),
+                  const SectionLabel('Баланс', color: HcColors.text),
+                  Semantics(
+                    label: 'Баланс ${summary.balance} ${pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов')}',
+                    excludeSemantics: true,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: summary.balance.toDouble()),
+                      duration: Motion.of(context, const Duration(milliseconds: 900)),
+                      curve: Motion.curve,
+                      builder: (context, v, _) => Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            formatNumber(v.round()),
+                            style: HcType.serif(size: 56, weight: 600, height: 1.05, tabular: true),
+                          ),
+                          const SizedBox(width: HcSpace.s),
+                          Text(
+                            pluralRu(summary.balance, 'бонус', 'бонуса', 'бонусов'),
+                            style: HcType.sans(size: 16, weight: 500, color: HcColors.text),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: HcSpace.l),
-                Pressable(
-                  onTap: () => _showFullscreenCode(context, summary.card),
-                  child: Container(
-                    padding: const EdgeInsets.all(HcSpace.l),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(HcRadii.small)),
-                    child: Row(
-                      children: [
-                        Hero(
-                          tag: 'loyalty-qr',
-                          child: Semantics(
-                            label: 'QR-код карты для сканирования на кассе',
-                            child: BarcodeWidget(
-                              barcode: Barcode.qrCode(errorCorrectLevel: BarcodeQRCorrectionLevel.medium),
-                              data: summary.card.barcode,
-                              width: 112,
-                              height: 112,
-                              color: HcColors.text,
+                  const SizedBox(height: HcSpace.l),
+                  Pressable(
+                    onTap: () => _showFullscreenCode(context, summary.card),
+                    child: Container(
+                      padding: const EdgeInsets.all(HcSpace.l),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(HcRadii.small),
+                      ),
+                      child: Row(
+                        children: [
+                          Hero(
+                            tag: 'loyalty-qr',
+                            child: Semantics(
+                              label: 'QR-код карты для сканирования на кассе',
+                              child: BarcodeWidget(
+                                barcode: Barcode.qrCode(errorCorrectLevel: BarcodeQRCorrectionLevel.medium),
+                                data: summary.card.barcode,
+                                width: 112,
+                                height: 112,
+                                color: HcColors.text,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: HcSpace.l),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SectionLabel('Номер карты', size: 12),
-                              const SizedBox(height: HcSpace.xs),
-                              Text(
-                                summary.card.cardNumber,
-                                style: HcType.sans(size: 17, weight: 600, letterSpacing: 0.8),
-                              ),
-                              const SizedBox(height: HcSpace.m),
-                              Row(
-                                children: [
-                                  const Icon(Icons.open_in_full_rounded, size: 14, color: HcColors.accentDark),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Показать крупно',
-                                    style: HcType.sans(size: 13, color: HcColors.accentDark, weight: 600),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          const SizedBox(width: HcSpace.l),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SectionLabel('Номер карты', size: 12),
+                                const SizedBox(height: HcSpace.xs),
+                                Text(
+                                  summary.card.cardNumber,
+                                  style: HcType.sans(size: 17, weight: 600, letterSpacing: 0.8),
+                                ),
+                                const SizedBox(height: HcSpace.m),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.open_in_full_rounded, size: 14, color: HcColors.accentDark),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Показать крупно',
+                                      style: HcType.sans(size: 13, color: HcColors.accentDark, weight: 600),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -281,6 +294,148 @@ class LoyaltyCardView extends StatelessWidget {
       decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     ),
   );
+}
+
+/// «Живая» карта: наклоняется в 3D за пальцем (с бликом под пальцем) и мягко
+/// возвращается; время от времени по ней проходит световая полоса, как по
+/// пластиковой карте. Касания не перехватываются — прокрутка и кнопки работают.
+/// Между проходами блика кадры не рисуются, чтобы не тратить батарею.
+class _TiltSheen extends StatefulWidget {
+  const _TiltSheen({required this.builder});
+
+  /// Строит карту; [light] — слой света, который карта кладёт под своё стекло.
+  final Widget Function(Widget light) builder;
+
+  @override
+  State<_TiltSheen> createState() => _TiltSheenState();
+}
+
+class _TiltSheenState extends State<_TiltSheen> with TickerProviderStateMixin {
+  static const _maxTilt = 0.11; // ≈6°
+
+  late final AnimationController _sheen = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
+  late final AnimationController _release = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+  Timer? _next;
+
+  Offset _tilt = Offset.zero; // x — наклон по горизонтали, y — по вертикали, −1…1
+  Offset _from = Offset.zero;
+  Offset? _touch; // точка касания в долях карты — для блика
+  bool _reduced = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _release.addListener(() {
+      setState(() => _tilt = Offset.lerp(_from, Offset.zero, Curves.elasticOut.transform(_release.value))!);
+    });
+    _sheen.addStatusListener((s) {
+      if (s == AnimationStatus.completed) _schedule(const Duration(seconds: 7));
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduced = Motion.reduced(context);
+    if (!_reduced && _next == null && !_sheen.isAnimating) _schedule(const Duration(milliseconds: 700));
+  }
+
+  void _schedule(Duration d) {
+    _next?.cancel();
+    _next = Timer(d, () {
+      if (mounted && !_reduced) _sheen.forward(from: 0);
+    });
+  }
+
+  void _onMove(PointerEvent e, Size size) {
+    if (_reduced || size.isEmpty) return;
+    final p = Offset(e.localPosition.dx / size.width, e.localPosition.dy / size.height);
+    _release.stop();
+    setState(() {
+      _touch = p;
+      _tilt = Offset((p.dx * 2 - 1).clamp(-1, 1), (p.dy * 2 - 1).clamp(-1, 1));
+    });
+  }
+
+  void _onUp() {
+    if (_reduced) return;
+    _from = _tilt;
+    setState(() => _touch = null);
+    _release.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _next?.cancel();
+    _sheen.dispose();
+    _release.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (e) => _onMove(e, context.size ?? Size.zero),
+      onPointerMove: (e) => _onMove(e, context.size ?? Size.zero),
+      onPointerUp: (_) => _onUp(),
+      onPointerCancel: (_) => _onUp(),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.0011)
+          ..rotateX(-_tilt.dy * _maxTilt)
+          ..rotateY(_tilt.dx * _maxTilt),
+        child: widget.builder(
+          IgnorePointer(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Световая полоса по диагонали.
+                AnimatedBuilder(
+                  animation: _sheen,
+                  builder: (context, _) {
+                    if (!_sheen.isAnimating) return const SizedBox.shrink();
+                    final t = Curves.easeInOutCubic.transform(_sheen.value);
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment(-1 + 3.4 * t - 1.2, -1),
+                          end: Alignment(-1 + 3.4 * t - 0.2, 1),
+                          colors: [
+                            Colors.white.withValues(alpha: 0),
+                            Colors.white.withValues(alpha: 0.95),
+                            Colors.white.withValues(alpha: 0),
+                          ],
+                          stops: const [0.28, 0.5, 0.72],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Отсвет под пальцем.
+                if (_touch != null)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(_touch!.dx * 2 - 1, _touch!.dy * 2 - 1),
+                        radius: 0.75,
+                        colors: [Colors.white.withValues(alpha: 0.85), Colors.white.withValues(alpha: 0)],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 void _showFullscreenCode(BuildContext context, LoyaltyCard card) {

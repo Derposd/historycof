@@ -36,6 +36,7 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       extendBody: true,
       body: HcBackground(
+        variant: shell.currentIndex,
         intensity: shell.currentIndex == 2 ? 0.9 : 0.5,
         child: _FadeBranches(index: shell.currentIndex, children: children),
       ),
@@ -138,20 +139,9 @@ class _GlassNavBar extends StatelessWidget {
               height: 56,
               child: Stack(
                 children: [
-                  // Одна подсветка, которая переезжает под выбранную вкладку.
-                  AnimatedPositioned(
-                    duration: Motion.of(context, Motion.medium),
-                    curve: Motion.emphasized,
-                    left: w * index,
-                    width: w,
-                    top: 0,
-                    bottom: 0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: HcColors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(HcRadii.pill),
-                      ),
-                    ),
+                  // Одна подсветка, которая «перетекает» под выбранную вкладку.
+                  Positioned.fill(
+                    child: _LiquidPill(index: index, slot: w),
                   ),
                   Row(
                     children: [
@@ -167,6 +157,96 @@ class _GlassNavBar extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Подсветка выбранной вкладки, которая переезжает как капля: передний край
+/// уходит к новой вкладке первым, задний догоняет — на полпути пилюля
+/// вытягивается, а у цели собирается обратно.
+class _LiquidPill extends StatefulWidget {
+  const _LiquidPill({required this.index, required this.slot});
+
+  final int index;
+  final double slot;
+
+  @override
+  State<_LiquidPill> createState() => _LiquidPillState();
+}
+
+class _LiquidPillState extends State<_LiquidPill> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 520))
+    ..value = 1;
+  late double _fromLeft = widget.index * widget.slot;
+  late double _fromRight = _fromLeft + widget.slot;
+
+  static const _lead = Interval(0, 0.72, curve: Cubic(0.3, 0, 0, 1));
+  static const _trail = Interval(0.22, 1, curve: Cubic(0.3, 0, 0, 1));
+
+  /// Положение краёв на пути к вкладке [index]: край по направлению движения —
+  /// «ведущий», противоположный — «догоняющий».
+  (double, double) _edgesTo(int index, double slot) {
+    final toLeft = index * slot;
+    final toRight = toLeft + slot;
+    final forward = toLeft >= _fromLeft;
+    final t = _c.value;
+    return (
+      _fromLeft + (toLeft - _fromLeft) * (forward ? _trail : _lead).transform(t),
+      _fromRight + (toRight - _fromRight) * (forward ? _lead : _trail).transform(t),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_LiquidPill old) {
+    super.didUpdateWidget(old);
+    if (old.index == widget.index && old.slot == widget.slot) return;
+    if (old.slot != widget.slot && old.index == widget.index) {
+      // Поменялась ширина (поворот экрана) — просто встаём на место.
+      _fromLeft = widget.index * widget.slot;
+      _fromRight = _fromLeft + widget.slot;
+      _c.value = 1;
+      return;
+    }
+    // Стартуем оттуда, где пилюля сейчас, даже если прошлый переход не доиграл.
+    final (l, r) = _edgesTo(old.index, old.slot);
+    _fromLeft = l;
+    _fromRight = r;
+    if (Motion.reduced(context)) {
+      _c.value = 1;
+    } else {
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final (left, right) = _edgesTo(widget.index, widget.slot);
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              width: right - left,
+              top: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: HcColors.accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(HcRadii.pill),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

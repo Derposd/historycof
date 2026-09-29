@@ -11,7 +11,6 @@ import '../../core/widgets/background.dart';
 import '../../core/widgets/common.dart';
 import '../../core/theme/theme.dart';
 import '../../core/widgets/logo.dart';
-import '../../core/widgets/motion.dart';
 
 /// Шаг 1 входа: номер телефона.
 class PhoneScreen extends ConsumerStatefulWidget {
@@ -74,7 +73,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(HcSpace.gutter, HcSpace.xxl, HcSpace.gutter, HcSpace.xl),
             children: [
-              const FadeSlideIn(child: HcLogo(size: 44)),
+              const HcLogo(size: 44, animate: true),
               const SizedBox(height: HcSpace.xxl),
               Text('Вход', style: HcType.serif(size: 38, weight: 600)),
               const SizedBox(height: HcSpace.s),

@@ -4,6 +4,7 @@ import '../api/api_exception.dart';
 import '../theme/colors.dart';
 import '../theme/theme.dart';
 import '../theme/typography.dart';
+import 'motion.dart';
 
 /// Подпись раздела: спокойный текст в строку (без капслока и разрядки).
 class SectionLabel extends StatelessWidget {
@@ -176,7 +177,8 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// Мягкий «скелетон» для загрузки.
+/// Мягкий «скелетон» для загрузки: по песочной плашке проходит тёплый блик.
+/// Блики всех плашек на экране идут синхронно — от времени, а не от момента появления.
 class SkeletonBox extends StatefulWidget {
   const SkeletonBox({super.key, this.height = 16, this.width, this.radius = 10});
 
@@ -189,8 +191,17 @@ class SkeletonBox extends StatefulWidget {
 }
 
 class _SkeletonBoxState extends State<SkeletonBox> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
-    ..repeat(reverse: true);
+  static const _period = Duration(milliseconds: 1600);
+  late final AnimationController _c = AnimationController(vsync: this, duration: _period);
+
+  @override
+  void initState() {
+    super.initState();
+    final phase = (DateTime.now().millisecondsSinceEpoch % _period.inMilliseconds) / _period.inMilliseconds;
+    _c
+      ..value = phase
+      ..repeat();
+  }
 
   @override
   void dispose() {
@@ -200,15 +211,45 @@ class _SkeletonBoxState extends State<SkeletonBox> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween(begin: 0.45, end: 0.9).animate(_c),
-      child: Container(
+    final base = HcColors.backgroundAlt;
+    final light = Color.alphaBlend(Colors.white.withValues(alpha: 0.7), base);
+    final box = BorderRadius.circular(widget.radius);
+    if (Motion.reduced(context)) {
+      return Container(
         height: widget.height,
         width: widget.width,
-        decoration: BoxDecoration(color: HcColors.backgroundAlt, borderRadius: BorderRadius.circular(widget.radius)),
+        decoration: BoxDecoration(color: base, borderRadius: box),
+      );
+    }
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) => Container(
+        height: widget.height,
+        width: widget.width,
+        decoration: BoxDecoration(
+          borderRadius: box,
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [base, light, base],
+            stops: const [0.35, 0.5, 0.65],
+            transform: _SlideGradient(Curves.easeInOutSine.transform(_c.value)),
+          ),
+        ),
       ),
     );
   }
+}
+
+/// Сдвигает градиент по ширине: 0 — блик за левым краем, 1 — за правым.
+class _SlideGradient extends GradientTransform {
+  const _SlideGradient(this.t);
+
+  final double t;
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
+      Matrix4.translationValues(bounds.width * (t * 2 - 1), 0, 0);
 }
 
 void showHcSnack(BuildContext context, String message) {
