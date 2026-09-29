@@ -25,9 +25,17 @@ export function Login() {
 
   return (
     <div className="login-wrap">
+      {/* Медленно плывущие цветные пятна — тот же тёплый фон, что в приложении */}
+      <span className="login-orb o1" aria-hidden="true" />
+      <span className="login-orb o2" aria-hidden="true" />
+      <span className="login-orb o3" aria-hidden="true" />
       <form className="card login-card stack" onSubmit={submit}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <Logo size={48} />
+          <Logo size={48} animate />
+        </div>
+        <div className="login-hello">
+          <h2>С возвращением</h2>
+          <div className="muted small">Новости, меню и обращения гостей — в одном месте</div>
         </div>
         <label className="field">
           <span className="caps">Email</span>

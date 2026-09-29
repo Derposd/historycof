@@ -4,6 +4,7 @@ import { api } from '../api'
 import { ErrorBox, ImageField, Loading, Modal } from '../components/ui'
 import { errorText, formatDate } from '../format'
 import type { NewsPost } from '../types'
+import { toast } from '../motion'
 
 export function News() {
   const qc = useQueryClient()
@@ -14,15 +15,27 @@ export function News() {
   const publish = useMutation({
     mutationFn: ({ id, notify }: { id: string; notify: boolean }) =>
       api(`/admin/news/${id}/publish`, { method: 'POST', json: { notify } }),
-    onSuccess: invalidate,
+    onSuccess: (_, v) => {
+      void invalidate()
+      toast(v.notify ? 'Опубликовано, гостям ушёл push' : 'Опубликовано')
+    },
+    onError: (e) => toast(errorText(e), 'error'),
   })
   const unpublish = useMutation({
     mutationFn: (id: string) => api(`/admin/news/${id}/unpublish`, { method: 'POST' }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      void invalidate()
+      toast('Снято с публикации')
+    },
+    onError: (e) => toast(errorText(e), 'error'),
   })
   const remove = useMutation({
     mutationFn: (id: string) => api(`/admin/news/${id}`, { method: 'DELETE' }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      void invalidate()
+      toast('Пост удалён')
+    },
+    onError: (e) => toast(errorText(e), 'error'),
   })
 
   return (
@@ -39,7 +52,7 @@ export function News() {
       {q.isError && <ErrorBox error={q.error} />}
       {q.data?.length === 0 && <div className="card empty">Постов пока нет — расскажите гостям о новинках</div>}
 
-      <div className="stack">
+      <div className="stack stagger">
         {q.data?.map((p) => (
           <div key={p.id} className="card row news-card">
             {p.imageUrl ? <img src={p.imageUrl} alt="" className="thumb news-thumb" /> : null}
@@ -122,6 +135,7 @@ function NewsEditor({ post, onClose, onSaved }: { post: NewsPost | null; onClose
       } else {
         await api('/admin/news', { method: 'POST', json: { title, body, imageUrl, pinned, publish: publishNow, notify } })
       }
+      toast(post ? 'Изменения сохранены' : publishNow ? 'Пост опубликован' : 'Черновик сохранён')
       onSaved()
     } catch (err) {
       setError(errorText(err))

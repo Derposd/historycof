@@ -1,15 +1,36 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { uploadImage } from '../api'
 import { errorText } from '../format'
+import { dismiss, reducedMotion, useCountUp, useToasts } from '../motion'
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  // Закрытие по ✕, фону или Esc сначала доигрывает анимацию ухода.
+  const [closing, setClosing] = useState(false)
+  const close = useCallback(() => {
+    if (reducedMotion()) return onClose()
+    setClosing(true)
+    setTimeout(onClose, 220)
+  }, [onClose])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    document.addEventListener('keydown', onKey)
+    // Страница под окном не прокручивается
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = overflow
+    }
+  }, [close])
+
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="row" style={{ marginBottom: 20 }}>
           <h2>{title}</h2>
           <span className="spacer" />
-          <button className="ghost small" onClick={onClose} aria-label="Закрыть">
+          <button className="ghost small icon-close" onClick={close} aria-label="Закрыть">
             ✕
           </button>
         </div>
@@ -122,10 +143,49 @@ export function Tabs<T extends string>({
   )
 }
 
-export function Loading() {
-  return <div className="empty">Загрузка…</div>
+/** Загрузка: «скелет» будущего содержимого с бегущим бликом. */
+export function Loading({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="skeleton-wrap" role="status" aria-label="Загрузка">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="skeleton-card" style={{ animationDelay: `${i * 60}ms` }}>
+          <span className="sk" style={{ width: '38%', height: 14 }} />
+          <span className="sk" style={{ width: '72%', height: 22 }} />
+          <span className="sk" style={{ width: '56%', height: 12 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Уведомления «Сохранено» и т. п. — внизу по центру, уходят сами. */
+export function Toaster() {
+  const items = useToasts()
+  return (
+    <div className="toaster" aria-live="polite">
+      {items.map((t) => (
+        <div key={t.id} className={`toast ${t.kind}${t.leaving ? ' leaving' : ''}`} onClick={() => dismiss(t.id)}>
+          <span className="toast-icon" aria-hidden="true">
+            {t.kind === 'ok' ? (
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              '!'
+            )}
+          </span>
+          {t.text}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
   return <div className="card error">{errorText(error)}</div>
+}
+
+/** Число, которое «набегает» до значения (для показателей на обзоре). */
+export function CountUp({ value }: { value: number }) {
+  return <>{useCountUp(value).toLocaleString('ru-RU')}</>
 }

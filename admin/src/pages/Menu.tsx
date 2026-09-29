@@ -4,6 +4,7 @@ import { api, uploadImage } from '../api'
 import { ErrorBox, ImageField, Loading, Modal, Tabs } from '../components/ui'
 import { errorText } from '../format'
 import { BADGE_LABELS, type MenuBadge, type MenuCategory, type MenuItem, type MenuPrice, type MenuSection } from '../types'
+import { toast } from '../motion'
 
 export function Menu() {
   const qc = useQueryClient()
@@ -66,7 +67,8 @@ export function Menu() {
         </div>
       )}
 
-      <div className="stack" style={{ gap: 20 }}>
+      {/* Ключ по разделу: при переключении Кухня/Бар категории заново выезжают лесенкой */}
+      <div key={section?.id} className="stack stagger" style={{ gap: 20 }}>
         {section?.categories.map((c, ci) => (
           <div key={c.id} className="card">
             <div className="cat-head">
@@ -212,6 +214,7 @@ function CategoryEditor({
     try {
       if (category) await api(`/admin/menu/categories/${category.id}`, { method: 'PATCH', json: { title, visible } })
       else await api('/admin/menu/categories', { method: 'POST', json: { sectionId, title, visible, sort: 999 } })
+      toast(category ? 'Категория сохранена' : 'Категория добавлена')
       onSaved()
     } catch (err) {
       setError(errorText(err))
@@ -222,6 +225,7 @@ function CategoryEditor({
     if (!category || !confirm(`Удалить категорию «${category.title}» вместе со всеми позициями?`)) return
     try {
       await api(`/admin/menu/categories/${category.id}`, { method: 'DELETE' })
+      toast('Категория удалена')
       onSaved()
     } catch (err) {
       setError(errorText(err))
@@ -305,6 +309,7 @@ function ItemEditor({
     try {
       if (item) await api(`/admin/menu/items/${item.id}`, { method: 'PATCH', json: payload })
       else await api('/admin/menu/items', { method: 'POST', json: { ...payload, sort: 999 } })
+      toast(item ? 'Позиция сохранена' : 'Позиция добавлена в меню')
       onSaved()
     } catch (err) {
       setError(errorText(err))
@@ -316,6 +321,7 @@ function ItemEditor({
   async function remove() {
     if (!item || !confirm(`Удалить «${item.title}»?`)) return
     await api(`/admin/menu/items/${item.id}`, { method: 'DELETE' })
+    toast('Позиция удалена')
     onSaved()
   }
 
@@ -455,7 +461,7 @@ function ThumbUpload({ item, onUploaded }: { item: MenuItem; onUploaded: (url: s
       try {
         onUploaded(await uploadImage(file, 'menu'))
       } catch (e) {
-        alert(errorText(e))
+        toast(errorText(e), 'error')
       } finally {
         setBusy(false)
       }

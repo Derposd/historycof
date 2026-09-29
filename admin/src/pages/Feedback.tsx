@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorBox, Loading, Modal } from '../components/ui'
 import { errorText, formatDate, formatPhone } from '../format'
+import { toast } from '../motion'
 import {
   FEEDBACK_STATUS_LABELS,
   FEEDBACK_TYPE_LABELS,
@@ -140,7 +141,8 @@ function FeedbackDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const answer = useMutation({
     mutationFn: (data: { reply?: string; status?: FeedbackStatus }) =>
       api<FeedbackT>(`/admin/feedback/${id}`, { method: 'PATCH', json: data }),
-    onSuccess: () => {
+    onSuccess: (_, v) => {
+      toast(v.reply ? 'Ответ отправлен гостю' : 'Отмечено как решённое')
       void qc.invalidateQueries({ queryKey: ['feedback'] })
       void qc.invalidateQueries({ queryKey: ['feedback-item', id] })
       void qc.invalidateQueries({ queryKey: ['analytics'] })

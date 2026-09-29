@@ -4,6 +4,7 @@ import { api } from '../api'
 import { ErrorBox, Loading } from '../components/ui'
 import { errorText } from '../format'
 import type { DayHours, Venue as VenueT } from '../types'
+import { toast } from '../motion'
 
 const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
 
@@ -33,7 +34,8 @@ function VenueForm({ initial }: { initial: VenueT }) {
       const saved = await api<VenueT>('/admin/venue', { method: 'PUT', json: form })
       setForm(saved)
       void qc.invalidateQueries({ queryKey: ['venue'] })
-      setMsg({ ok: true, text: 'Сохранено — приложение покажет новые данные при следующем открытии экрана' })
+      setMsg(null)
+      toast('Сохранено — в приложении обновится при следующем открытии экрана')
     } catch (err) {
       setMsg({ ok: false, text: errorText(err) })
     }

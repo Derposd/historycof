@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useCountUp } from '../motion'
 
 interface Point {
   day: string // YYYY-MM-DD (по Москве)
@@ -47,6 +48,7 @@ export function SignupsChart({ points }: { points: Point[] }) {
   const total = days.reduce((s, d) => s + d.n, 0)
   const top = niceMax(Math.max(...days.map((d) => d.n)))
   const [hover, setHover] = useState<number | null>(null)
+  const shownTotal = useCountUp(total)
   const h = hover !== null ? days[hover] : null
 
   return (
@@ -54,7 +56,7 @@ export function SignupsChart({ points }: { points: Point[] }) {
       <div className="chart-head">
         <div className="caps">Регистрации за 30 дней</div>
         <div className="chart-total">
-          <span className="stat-value" style={{ fontSize: 34 }}>{total.toLocaleString('ru-RU')}</span>
+          <span className="stat-value" style={{ fontSize: 34 }}>{shownTotal.toLocaleString('ru-RU')}</span>
           <span className="muted small">{plural(total)}</span>
         </div>
       </div>
@@ -83,9 +85,10 @@ export function SignupsChart({ points }: { points: Point[] }) {
               aria-label={`${fmtDay(d.day, { day: 'numeric', month: 'long' })}: ${d.n} ${plural(d.n)}`}
             >
               {d.n > 0 ? (
-                <div className="chart-bar" style={{ height: `${(d.n / top) * 100}%` }} />
+                // Столбики «вырастают» по очереди слева направо
+                <div className="chart-bar grow" style={{ height: `${(d.n / top) * 100}%`, animationDelay: `${120 + i * 16}ms` }} />
               ) : (
-                <div className="chart-bar zero" />
+                <div className="chart-bar zero grow" style={{ animationDelay: `${120 + i * 16}ms` }} />
               )}
             </div>
           ))}

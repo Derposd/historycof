@@ -5,10 +5,13 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
 import './index.css'
+import { installSpotlight } from './motion'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } },
 })
+
+installSpotlight()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

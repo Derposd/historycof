@@ -5,6 +5,7 @@ import { useAuth } from '../auth-context'
 import { ErrorBox, Loading, Modal } from '../components/ui'
 import { errorText, formatDate } from '../format'
 import type { StaffRole, StaffUser } from '../types'
+import { toast } from '../motion'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   admin: 'Администратор',
@@ -20,8 +21,11 @@ export function Staff() {
 
   const toggle = useMutation({
     mutationFn: (u: StaffUser) => api(`/admin/staff/${u.id}`, { method: 'PATCH', json: { active: !u.active } }),
-    onSuccess: invalidate,
-    onError: (e) => alert(errorText(e)),
+    onSuccess: (_, u) => {
+      void invalidate()
+      toast(u.active ? `${u.name}: доступ отключён` : `${u.name}: доступ включён`)
+    },
+    onError: (e) => toast(errorText(e), 'error'),
   })
 
   return (
@@ -101,6 +105,7 @@ function CreateStaff({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
     e.preventDefault()
     try {
       await api('/admin/staff', { method: 'POST', json: { name, email, password, role } })
+      toast('Сотрудник добавлен')
       onSaved()
     } catch (err) {
       setError(errorText(err))

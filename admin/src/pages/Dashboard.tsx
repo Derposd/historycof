@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { SignupsChart } from '../components/SignupsChart'
-import { ErrorBox, Loading } from '../components/ui'
+import { CountUp, ErrorBox, Loading } from '../components/ui'
 import { FEEDBACK_TYPE_LABELS, type AnalyticsSummary } from '../types'
 
 export function Dashboard() {
@@ -12,7 +12,7 @@ export function Dashboard() {
   const s = q.data
 
   return (
-    <div className="stack" style={{ gap: 24 }}>
+    <div className="stack stagger" style={{ gap: 24 }}>
       <div className="page-head">
         <div>
           <div className="caps">History Coffee</div>
@@ -20,7 +20,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-4">
+      <div className="grid grid-4 stagger">
         <Stat label="Гостей в приложении" value={s.guests.total} hint={`+${s.guests.new30d} за 30 дней`} />
         <Stat label="Активны за неделю" value={s.guests.active7d} />
         <Stat label="С бонусной картой" value={s.guests.loyaltyLinked} hint="связаны с iiko" />
@@ -37,7 +37,9 @@ export function Dashboard() {
             <span className="spacer" />
             <Link to="/feedback">Открыть →</Link>
           </div>
-          <div className="stat-value">{s.feedback.open}</div>
+          <div className="stat-value">
+            <CountUp value={s.feedback.open} />
+          </div>
           <div className="muted small">ждут ответа</div>
           <hr style={{ margin: '4px 0' }} />
           <div className="row">
@@ -51,7 +53,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-4">
+      <div className="grid grid-4 stagger">
         <Stat label="Опубликовано новостей" value={s.newsPublished} />
         <Stat label="Позиций в меню" value={s.menuItems} />
       </div>
@@ -67,7 +69,9 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   return (
     <div className="card">
       <div className="caps">{label}</div>
-      <div className="stat-value">{value.toLocaleString('ru-RU')}</div>
+      <div className="stat-value">
+        <CountUp value={value} />
+      </div>
       {hint && <div className="muted small" style={{ marginTop: 6 }}>{hint}</div>}
     </div>
   )

@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth-context'
 import type { AnalyticsSummary } from '../types'
 import { Logo } from './Monogram'
+import { Toaster } from './ui'
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -28,6 +29,21 @@ export function Layout() {
     refetchInterval: 60_000,
   })
   const open = summary.data?.feedback.open ?? 0
+  const hasOpen = open > 0
+
+  // Одна подсветка, которая переезжает к активному пункту меню.
+  const navRef = useRef<HTMLElement>(null)
+  const [ind, setInd] = useState<{ top: number; height: number } | null>(null)
+  const section = '/' + (pathname.split('/')[1] ?? '')
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('.nav-link.active')
+      setInd(el ? { top: el.offsetTop, height: el.offsetHeight } : null)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [section, user?.role, hasOpen])
 
   return (
     <div className={`layout${navOpen ? ' nav-open' : ''}`}>
@@ -47,8 +63,11 @@ export function Layout() {
       </header>
       <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
 
-      <aside className="sidebar" id="sidebar">
-        <Logo size={40} />
+      <aside className="sidebar" id="sidebar" ref={navRef}>
+        {ind && (
+          <span className="nav-indicator" aria-hidden="true" style={{ transform: `translateY(${ind.top}px)`, height: ind.height }} />
+        )}
+        <Logo size={40} animate />
         <NavLink to="/" end className="nav-link">
           Обзор
         </NavLink>
@@ -80,8 +99,13 @@ export function Layout() {
         </div>
       </aside>
       <main className="content">
-        <Outlet />
+        {/* Ключ по разделу: при переходе страница заново «проявляется»,
+            а открытие карточки обращения (/feedback/:id) страницу не перезапускает */}
+        <div key={section} className="page">
+          <Outlet />
+        </div>
       </main>
+      <Toaster />
     </div>
   )
 }
