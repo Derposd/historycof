@@ -26,6 +26,10 @@ docs/      архитектура, интеграция с iiko, дизайн-с
 
 Нужны Node 22, PostgreSQL 16, Flutter 3.47.
 
+В контейнере Claude Code / на Linux всё поднимается одной командой: `tools/dev-up.sh`
+(API на :3000, админка на :5173; с `--flutter` — ещё и Flutter SDK).
+Контекст проекта для продолжения работы с Claude — в [CLAUDE.md](CLAUDE.md).
+
 ```bash
 # 1. Backend
 cd backend
