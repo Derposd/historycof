@@ -114,6 +114,15 @@ backend 127.0.0.1:8080, Postgres 17, каталог /opt/lms). Наш стенд
   чтобы при быстром переключении не просвечивала прошлая страница; есть тест).
 - Админка: адаптивная — на телефоне (≤860px) бургер и выезжающее меню, таблицы → карточки
   (`.rows-table`), позиции меню — `.item`-сетка. Проверять на 390 и 320 px.
+- Моушн приложения: логотип рисуется (`HcLogo(animate: true)`), фон перетекает между вкладками
+  (`HcBackground(variant:)`, анимация только во время перехода), «жидкая» подсветка нижнего меню
+  (`_LiquidPill`), бонусная карта наклоняется за пальцем и с бликом (`_TiltSheen`; свет — ПОД стеклом,
+  поверх QR ничего не класть), параллакс фото новости, рисующаяся галочка «Спасибо», шиммер-скелетоны.
+  Цифры в Cormorant — всегда lining (`HcType.serif` так делает сам; `tabular: true` для бегущих чисел).
+- Моушн админки: `admin/src/motion.ts` (useCountUp, toast(), свет под курсором), `.page` / `.stagger`,
+  индикатор бокового меню, окна с уходом (Esc/фон/✕). **Анимации появления — только с
+  `animation-fill-mode: backwards`**: удержанный transform/filter делает элемент рамкой для
+  `position: fixed`, и окно затемняет только часть экрана (ловилось автотестом).
 - Backend: NestJS **11** (12 — только ESM), TypeScript **~5.9** (7 ломает ts-jest),
   `useDefineForClassFields: false` (иначе DTO затирают поля), глобальный ValidationPipe с
   `forbidNonWhitelisted` — **каждый query-параметр должен быть в DTO** (так падал список обращений).
@@ -121,6 +130,10 @@ backend 127.0.0.1:8080, Postgres 17, каталог /opt/lms). Наш стенд
 - Демо-режим приложения: `--dart-define=DEMO=true` (DemoInterceptor, данные и фото из assets).
 
 ## Проверка интерфейса
+
+Ролики анимаций приложения: `flutter test tool/motion_test.dart --dart-define=DEMO=true --update-goldens`
+→ `python3 tool/make_gifs.py` → GIF в `mobile/tool/screens/` (папка в .gitignore). Для админки —
+Playwright со скриншотами по таймеру; замедлить CSS-анимации: CDP `Animation.setPlaybackRate`.
 
 Chromium предустановлен (`/opt/pw-browsers/chromium`). Playwright ставить в scratchpad
 (`npm i playwright`), запускать с `executablePath: '/opt/pw-browsers/chromium'`,
@@ -131,6 +144,8 @@ Chromium предустановлен (`/opt/pw-browsers/chromium`). Playwright 
 
 Сделано (сентябрь 2026): backend, админка (в т.ч. мобильная вёрстка), приложение Android,
 анимации, фото блюд, график регистраций, стенд на VPS с тестовыми аккаунтами, CI.
+30.09.2026: большой проход по моушн-дизайну приложения и админки (см. «Дизайн и код»);
+точка отката до него — снимок `v1.0-2026-09-29`.
 
 До продажи/запуска (см. docs/client-questions.md):
 - настоящий iiko (доступ к API от интегратора кофейни), SMS-провайдер, Firebase (push);
