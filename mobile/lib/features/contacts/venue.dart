@@ -20,11 +20,8 @@ class Venue {
     required this.tagline,
     required this.address,
     required this.phone,
-    required this.whatsapp,
     required this.legalName,
     required this.hours,
-    this.telegram = '',
-    this.vk = '',
     this.website,
     this.lat,
     this.lng,
@@ -36,11 +33,7 @@ class Venue {
   final double? lat;
   final double? lng;
   final String phone;
-  final String whatsapp;
 
-  /// Telegram и ВКонтакте — необязательные (Instagram не используем: Meta признана в РФ экстремистской).
-  final String telegram;
-  final String vk;
   final String? website;
   final List<DayHours> hours;
 
@@ -54,9 +47,6 @@ class Venue {
     lat: (j['lat'] as num?)?.toDouble(),
     lng: (j['lng'] as num?)?.toDouble(),
     phone: j['phone'] as String,
-    whatsapp: j['whatsapp'] as String,
-    telegram: j['telegram'] as String? ?? '',
-    vk: j['vk'] as String? ?? '',
     website: j['website'] as String?,
     legalName: j['legalName'] as String? ?? '',
     hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
@@ -68,7 +58,6 @@ class Venue {
     tagline: 'Место для ваших историй',
     address: 'г. Нальчик, ул. Толстого, 43',
     phone: '+79604316223',
-    whatsapp: '+79604316223',
     website: 'https://historycoffee.ru/',
     legalName: 'ИП Жабоева А. Т.',
     hours: [

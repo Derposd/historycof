@@ -42,15 +42,10 @@ class UpdateVenueDto {
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lat !== null) @IsLatitude() lat?: number | null;
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lng !== null) @IsLongitude() lng?: number | null;
   @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'Телефон в формате +7XXXXXXXXXX' }) phone?: string;
-  @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'WhatsApp в формате +7XXXXXXXXXX' }) whatsapp?: string;
-  @IsOptional() @Matches(/^([A-Za-z0-9_]{5,32})?$/, { message: 'Telegram — имя без @ (латиница, цифры, _)' }) telegram?: string;
-  @IsOptional() @Matches(/^([A-Za-z0-9_.]{2,50})?$/, { message: 'ВКонтакте — короткое имя сообщества' }) vk?: string;
   @IsOptional() @IsString() @MaxLength(200) website?: string;
   @IsOptional() @IsString() @Length(1, 200, { message: 'Укажите наименование продавца (ИП или организация)' }) legalName?: string;
   @IsOptional() @IsString() @MaxLength(300) legalAddress?: string;
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => !!o.privacyEmail) @IsEmail({}, { message: 'Почта указана неверно' }) privacyEmail?: string;
-  @IsOptional() @IsString() @MaxLength(3000) processors?: string;
-  @IsOptional() @IsString() @MaxLength(20000) loyaltyRules?: string;
 
   @IsOptional()
   @IsArray()

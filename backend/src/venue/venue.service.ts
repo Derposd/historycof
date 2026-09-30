@@ -13,11 +13,6 @@ export interface VenueInfo {
   lat: number | null;
   lng: number | null;
   phone: string;
-  whatsapp: string;
-  /** Telegram: имя канала/аккаунта без @ (необязательно). */
-  telegram: string;
-  /** ВКонтакте: короткое имя сообщества (необязательно). */
-  vk: string;
   website: string;
   hours: DayHours[];
   // ── Сведения о продавце (ЗоЗПП ст. 9) и об операторе ПДн (152-ФЗ) ──
@@ -27,14 +22,10 @@ export interface VenueInfo {
   legalAddress: string;
   /** Почта для запросов по персональным данным (необязательно). */
   privacyEmail: string;
-  /** Кому оператор поручает обработку ПДн — для политики и согласия; пусто — типовой перечень. */
-  processors: string;
-  /** Правила бонусной программы; пусто — типовой текст. */
-  loyaltyRules: string;
 }
 
 /** Поля, которые раньше были в настройках и больше не используются. */
-const REMOVED_FIELDS = ['instagram', 'inn', 'ogrn'];
+const REMOVED_FIELDS = ['instagram', 'whatsapp', 'telegram', 'vk', 'inn', 'ogrn', 'processors', 'loyaltyRules'];
 
 /** Данные из брифа заказчика (сверено с historycoffee.ru). */
 export const DEFAULT_VENUE: VenueInfo = {
@@ -44,15 +35,10 @@ export const DEFAULT_VENUE: VenueInfo = {
   lat: null,
   lng: null,
   phone: '+79604316223',
-  whatsapp: '+79604316223',
-  telegram: '',
-  vk: '',
   website: 'https://historycoffee.ru/',
   legalName: 'ИП Жабоева А. Т.',
   legalAddress: '',
   privacyEmail: '',
-  processors: '',
-  loyaltyRules: '',
   hours: [
     { day: 1, open: '08:00', close: '23:00' },
     { day: 2, open: '08:00', close: '23:00' },
@@ -76,10 +62,14 @@ export class VenueService {
   async get(): Promise<VenueInfo> {
     const [row] = await this.db.select().from(settings).where(eq(settings.key, KEY));
     const stored = { ...((row?.value as Record<string, unknown>) ?? {}) };
-    // Instagram убран: Meta признана в РФ экстремистской организацией — ссылки и символику не показываем.
+    // Мессенджеры и соцсети убраны: Instagram — Meta признана в РФ экстремистской (наказывают даже
+    // за ссылки), WhatsApp заблокирован с февраля 2026, Telegram ограничен. Связь — только телефон.
     // ИНН/ОГРН убраны: для меню и согласия не обязательны (нужны только наименование и адрес).
     for (const k of REMOVED_FIELDS) delete stored[k];
-    return { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
+    const venue = { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
+    // Адрес продавца по умолчанию — адрес кофейни (показываем в админке настоящее значение)
+    if (!venue.legalAddress?.trim()) venue.legalAddress = venue.address;
+    return venue;
   }
 
   async getWithStatus(now = new Date()): Promise<VenueInfo & { timezone: string; openState: OpenState }> {

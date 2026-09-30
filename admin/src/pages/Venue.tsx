@@ -114,24 +114,6 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <span className="caps">Телефон</span>
             <input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+79604316223" required />
           </label>
-          <label className="field">
-            <span className="caps">WhatsApp</span>
-            <input value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} placeholder="+79604316223" required />
-          </label>
-          <div className="row">
-            <label className="field" style={{ flex: 1 }}>
-              <span className="caps">Telegram (без @, необязательно)</span>
-              <input value={form.telegram} onChange={(e) => set('telegram', e.target.value.replace(/^@/, ''))} placeholder="historycoffee" />
-            </label>
-            <label className="field" style={{ flex: 1 }}>
-              <span className="caps">ВКонтакте (короткое имя)</span>
-              <input value={form.vk} onChange={(e) => set('vk', e.target.value)} placeholder="historycoffee" />
-            </label>
-          </div>
-          <span className="muted small">
-            Instagram в приложении не показываем: компания Meta признана в РФ экстремистской организацией, за её
-            символику штрафуют.
-          </span>
         </div>
 
         <div className="card stack">
@@ -180,8 +162,8 @@ function VenueForm({ initial }: { initial: VenueT }) {
       <div className="card stack" style={{ marginTop: 16 }}>
         <h3>Продавец и документы</h3>
         <span className="muted small">
-          Подставляются в согласие на обработку персональных данных, политику и правила бонусной программы.
-          По закону обязательны только наименование и адрес.
+          Подставляются в согласие на обработку персональных данных и политику — по закону там обязательны
+          наименование и адрес продавца.
         </span>
         <div className="grid grid-2" style={{ gap: 12 }}>
           <label className="field">
@@ -189,33 +171,13 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} required />
           </label>
           <label className="field">
-            <span className="caps">Адрес</span>
-            <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} placeholder={`Пусто — ${form.address}`} />
+            <span className="caps">Адрес продавца</span>
+            <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} required />
           </label>
         </div>
         <label className="field">
           <span className="caps">Почта для запросов гостей о данных (необязательно)</span>
           <input type="email" value={form.privacyEmail} onChange={(e) => set('privacyEmail', e.target.value)} placeholder="pd@historycoffee.ru" />
-        </label>
-        <label className="field">
-          <span className="caps">Кому передаются данные гостей (для согласия и политики)</span>
-          <textarea
-            value={form.processors}
-            onChange={(e) => set('processors', e.target.value)}
-            rows={4}
-            placeholder={'- ООО «…» (iiko) — ведение бонусного счёта\n- ООО «…» — отправка SMS с кодом\n- ООО «…» — хостинг в РФ'}
-          />
-          <span className="muted small">По строке на каждого: наименование и что делает. Пусто — в документах будет типовой перечень без названий.</span>
-        </label>
-        <label className="field">
-          <span className="caps">Правила бонусной программы</span>
-          <textarea
-            value={form.loyaltyRules}
-            onChange={(e) => set('loyaltyRules', e.target.value)}
-            rows={6}
-            placeholder="Процент начисления, какую часть заказа можно оплатить бонусами, срок действия бонусов…"
-          />
-          <span className="muted small">Пусто — в приложении будут типовые правила без процентов и сроков.</span>
         </label>
         <div className="row" style={{ gap: 14 }}>
           {(['privacy', 'consent', 'marketing', 'loyalty'] as const).map((k) => (

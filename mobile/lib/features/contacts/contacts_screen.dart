@@ -62,35 +62,32 @@ class ContactsScreen extends ConsumerWidget {
             padding: h,
             child: FadeSlideIn(
               index: 1,
-              // Связь: телефон, WhatsApp и, если указаны в админке, Telegram и ВКонтакте.
-              // Instagram не показываем: компания Meta признана в РФ экстремистской организацией.
-              child: Row(
-                children: [
-                  for (final (i, tile) in [
-                    _ActionTile(
-                      icon: Icons.call_outlined,
-                      label: 'Позвонить',
-                      onTap: () => openExternal(Links.call(venue.phone)),
-                    ),
-                    _ActionTile(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'WhatsApp',
-                      onTap: () => openExternal(Links.whatsapp(venue.whatsapp)),
-                    ),
-                    if (venue.telegram.isNotEmpty)
-                      _ActionTile(
-                        icon: Icons.send_rounded,
-                        label: 'Telegram',
-                        onTap: () => openExternal(Links.telegram(venue.telegram)),
+              // Связь — только телефон. Мессенджеров и соцсетей нет: Instagram — Meta признана в РФ
+              // экстремистской (наказывают и за ссылки), WhatsApp заблокирован, Telegram ограничен.
+              child: Semantics(
+                button: true,
+                label: 'Позвонить, ${formatPhone(venue.phone)}',
+                excludeSemantics: true,
+                child: SoftCard(
+                  onTap: () => openExternal(Links.call(venue.phone)),
+                  child: Row(
+                    children: [
+                      const IconTile(Icons.call_outlined),
+                      const SizedBox(width: HcSpace.m),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Позвонить', style: HcType.serif(size: 21, weight: 600)),
+                            const SizedBox(height: 2),
+                            Text(formatPhone(venue.phone), style: HcType.sans(size: 13, color: HcColors.textSecondary)),
+                          ],
+                        ),
                       ),
-                    if (venue.vk.isNotEmpty)
-                      _ActionTile(
-                        icon: Icons.groups_outlined,
-                        label: 'ВКонтакте',
-                        onTap: () => openExternal(Links.vk(venue.vk)),
-                      ),
-                  ].indexed) ...[if (i > 0) const SizedBox(width: HcSpace.listGap), Expanded(child: tile)],
-                ],
+                      const Icon(Icons.chevron_right_rounded, color: HcColors.textSecondary),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -110,16 +107,6 @@ class ContactsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: HcSpace.section),
-          const Padding(padding: h, child: SectionLabel('Телефон')),
-          const SizedBox(height: HcSpace.xs),
-          Padding(
-            padding: h,
-            child: Pressable(
-              onTap: () => openExternal(Links.call(venue.phone)),
-              child: Text(formatPhone(venue.phone), style: HcType.serif(size: 26, weight: 600)),
             ),
           ),
           const SizedBox(height: HcSpace.section),
@@ -242,34 +229,6 @@ class _OpenIndicatorState extends State<_OpenIndicator> with SingleTickerProvide
                 style: HcType.sans(size: 13, weight: 600, color: open ? HcColors.accentDark : HcColors.terracotta),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.label, required this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      child: SoftCard(
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(vertical: HcSpace.l),
-        child: Column(
-          children: [
-            IconTile(icon, size: 42),
-            const SizedBox(height: HcSpace.s),
-            Text(label, style: HcType.sans(size: 13, weight: 500)),
           ],
         ),
       ),

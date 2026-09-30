@@ -81,11 +81,8 @@ void main() {
   });
 
   group('Links', () {
-    test('звонок, WhatsApp, Telegram, ВКонтакте', () {
+    test('звонок', () {
       expect(Links.call('+79604316223').toString(), 'tel:+79604316223');
-      expect(Links.whatsapp('+79604316223').toString(), 'https://wa.me/79604316223');
-      expect(Links.telegram('historycoffee').toString(), 'https://t.me/historycoffee');
-      expect(Links.vk('historycoffee').toString(), 'https://vk.com/historycoffee');
     });
 
     test('маршрут по адресу, пока нет координат', () {

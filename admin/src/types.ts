@@ -122,16 +122,11 @@ export interface Venue {
   lat: number | null
   lng: number | null
   phone: string
-  whatsapp: string
-  telegram: string
-  vk: string
   website: string
   hours: DayHours[]
   legalName: string
   legalAddress: string
   privacyEmail: string
-  processors: string
-  loyaltyRules: string
 }
 
 export interface AnalyticsSummary {

@@ -46,7 +46,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- url_launcher: звонок, карты, WhatsApp, Instagram (package visibility, Android 11+) -->
+        <!-- url_launcher: звонок, карты (package visibility, Android 11+) -->
         <intent>
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>
