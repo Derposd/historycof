@@ -5,7 +5,7 @@ import { api } from '../api'
 import { ask, confirmDanger } from '../ask'
 import { BusyButton, ErrorBox, ImageField, Loading, Modal } from '../components/ui'
 import { errorText, formatDate } from '../format'
-import type { NewsPost } from '../types'
+import type { AnalyticsSummary, NewsPost } from '../types'
 import { toast, usePageTitle } from '../motion'
 import { Monogram } from '../components/Monogram'
 
@@ -13,6 +13,10 @@ export function News() {
   usePageTitle('Новости')
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['news'], queryFn: () => api<NewsPost[]>('/admin/news') })
+  // Сколько гостей дали согласие на рекламу (38-ФЗ ст. 18) — только им уходят уведомления о новостях
+  const analytics = useQuery({ queryKey: ['analytics'], queryFn: () => api<AnalyticsSummary>('/admin/analytics/summary') })
+  const subscribers = analytics.data?.marketingSubscribers ?? 0
+
   // /news?new=1 (быстрое действие на обзоре) сразу открывает редактор нового поста
   const [params, setParams] = useSearchParams()
   const [editing, setEditing] = useState<NewsPost | 'new' | null>(() => (params.get('new') ? 'new' : null))
@@ -26,7 +30,7 @@ export function News() {
       api(`/admin/news/${id}/publish`, { method: 'POST', json: { notify } }),
     onSuccess: (_, v) => {
       void invalidate()
-      toast(v.notify ? 'Опубликовано, гостям ушёл push' : 'Опубликовано')
+      toast(v.notify ? 'Опубликовано, уведомление отправлено' : 'Опубликовано')
     },
     onError: (e) => toast(errorText(e), 'error'),
   })
@@ -71,7 +75,7 @@ export function News() {
                   {p.status === 'published' ? 'Опубликовано' : 'Черновик'}
                 </span>
                 {p.pinned && <span className="pill gold">Закреплено</span>}
-                {p.pushedAt && <span className="pill outline">Push отправлен</span>}
+                {p.pushedAt && <span className="pill outline">Уведомление отправлено</span>}
                 <span className="muted small">{formatDate(p.publishedAt ?? p.createdAt)}</span>
               </div>
               <h3>{p.title}</h3>
@@ -91,10 +95,13 @@ export function News() {
                     if (p.pushedAt) return publish.mutate({ id: p.id, notify: false })
                     const notify = await ask({
                       title: 'Опубликовать пост?',
-                      text: 'Можно сразу отправить гостям push-уведомление — его увидят все, кто подписан на новости.',
+                      text:
+                        subscribers > 0
+                          ? `Уведомление получат только гости, давшие согласие на рекламу, — сейчас их ${subscribers}. Остальные увидят пост в ленте.`
+                          : 'Пока никто из гостей не дал согласие на рекламные уведомления — пост появится только в ленте.',
                       actions: [
                         { label: 'Без уведомления', value: false, kind: 'ghost' },
-                        { label: 'Опубликовать и отправить push', value: true },
+                        ...(subscribers > 0 ? [{ label: 'Опубликовать и отправить уведомление', value: true }] : []),
                       ],
                     })
                     if (notify !== null) publish.mutate({ id: p.id, notify })
@@ -198,7 +205,7 @@ function NewsEditor({ post, onClose, onSaved }: { post: NewsPost | null; onClose
             {publishNow && (
               <label className="check">
                 <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-                Отправить push-уведомление подписчикам
+                Отправить уведомление гостям, давшим согласие на рекламу
               </label>
             )}
           </>
@@ -258,7 +265,7 @@ function NewsPreview({
       <div className="phone-screen">
         {push && (
           <div className="phone-push">
-            <span className="phone-push-icon">H</span>
+            <span className="phone-push-icon"><Monogram size={28} /></span>
             <div>
               <div className="phone-push-app">History Coffee · сейчас</div>
               <div className="phone-push-title">{title || 'Заголовок поста'}</div>

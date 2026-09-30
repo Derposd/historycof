@@ -4,7 +4,7 @@ class GuestProfile {
     required this.phone,
     this.name,
     this.birthday,
-    this.pushNewsEnabled = true,
+    this.pushNewsEnabled = false,
     this.consentRequired = false,
   });
 
@@ -26,7 +26,7 @@ class GuestProfile {
     phone: j['phone'] as String,
     name: j['name'] as String?,
     birthday: j['birthday'] as String?,
-    pushNewsEnabled: j['pushNewsEnabled'] as bool? ?? true,
+    pushNewsEnabled: j['pushNewsEnabled'] as bool? ?? false,
     consentRequired: j['consentRequired'] as bool? ?? false,
   );
 

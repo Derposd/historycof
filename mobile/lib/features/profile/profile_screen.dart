@@ -87,15 +87,37 @@ class ProfileScreen extends ConsumerWidget {
             _Group(children: [_PushToggle(profile: profile)]),
           ],
           const SizedBox(height: HcSpace.section),
-          const Padding(padding: h, child: SectionLabel('О приложении')),
+          const Padding(padding: h, child: SectionLabel('Документы')),
           const SizedBox(height: HcSpace.s),
           _Group(
             children: [
               _Row(
                 icon: Icons.shield_outlined,
-                title: 'Политика конфиденциальности',
-                onTap: () => context.push('/privacy'),
+                title: 'Политика обработки персональных данных',
+                onTap: () => context.push('/legal/privacy'),
               ),
+              _Row(
+                icon: Icons.fact_check_outlined,
+                title: 'Согласие на обработку данных',
+                onTap: () => context.push('/legal/consent'),
+              ),
+              _Row(
+                icon: Icons.campaign_outlined,
+                title: 'Согласие на рекламу',
+                onTap: () => context.push('/legal/marketing'),
+              ),
+              _Row(
+                icon: Icons.loyalty_outlined,
+                title: 'Правила бонусной программы',
+                onTap: () => context.push('/legal/loyalty'),
+              ),
+            ],
+          ),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('О приложении')),
+          const SizedBox(height: HcSpace.s),
+          _Group(
+            children: [
               _Row(
                 icon: Icons.article_outlined,
                 title: 'Лицензии',
@@ -119,9 +141,17 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: HcSpace.section),
+          // Сведения о продавце (ЗоЗПП, ст. 9) и возрастная категория (436-ФЗ)
           Center(
             child: Text(
-              '${venue.legalName}\n${venue.address}',
+              [
+                'Продавец: ${venue.legalName}',
+                if (venue.inn.isNotEmpty) 'ИНН ${venue.inn}',
+                if (venue.ogrn.isNotEmpty) '${venue.ogrn.length == 15 ? 'ОГРНИП' : 'ОГРН'} ${venue.ogrn}',
+                if (venue.legalAddress.isNotEmpty) venue.legalAddress,
+                'Кофейня: ${venue.address}',
+                '0+',
+              ].join('\n'),
               textAlign: TextAlign.center,
               style: HcType.sans(size: 12, color: HcColors.textSecondary),
             ),
@@ -297,9 +327,11 @@ class _PushToggle extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Новости кофейни', style: HcType.sans(size: 15.5, weight: 500)),
+                Text('Новости и акции', style: HcType.sans(size: 15.5, weight: 500)),
                 Text(
-                  push.enabled ? 'Новинки, события, акции' : 'Уведомления не настроены в этой сборке',
+                  push.enabled
+                      ? 'Уведомления о новинках и акциях — по вашему согласию'
+                      : 'Уведомления не настроены в этой сборке',
                   style: HcType.sans(size: 12.5, color: HcColors.textSecondary),
                 ),
               ],
@@ -310,9 +342,10 @@ class _PushToggle extends ConsumerWidget {
             onChanged: push.enabled
                 ? (v) async {
                     selectionHaptic();
+                    // Включение — это согласие на рекламу (38-ФЗ ст. 18): спрашиваем явно
+                    if (v && !await _askMarketingConsent(context)) return;
                     try {
                       await ref.read(authControllerProvider.notifier).updateProfile(pushNewsEnabled: v);
-                      await push.setNewsSubscription(v);
                     } catch (e) {
                       if (context.mounted) showHcSnack(context, ApiException.messageOf(e));
                     }
@@ -323,6 +356,36 @@ class _PushToggle extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Отдельное согласие на рекламу перед включением «Новостей и акций».
+Future<bool> _askMarketingConsent(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Новости и акции'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Разрешите присылать уведомления о новинках меню, событиях и акциях кофейни. '
+            'Это согласие на получение рекламы — его можно отозвать в любой момент этим же переключателем.',
+          ),
+          TextButton(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => context.push('/legal/marketing'),
+            child: const Text('Текст согласия'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Не сейчас')),
+        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Даю согласие')),
+      ],
+    ),
+  );
+  return ok == true;
 }
 
 class _Group extends StatelessWidget {

@@ -72,7 +72,6 @@ export interface AppConfig {
     bootstrapEmail?: string;
     bootstrapPassword?: string;
   };
-  privacyPolicyVersion: string;
   timezone: string;
 }
 
@@ -169,7 +168,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       bootstrapEmail: opt(env.ADMIN_BOOTSTRAP_EMAIL),
       bootstrapPassword: opt(env.ADMIN_BOOTSTRAP_PASSWORD),
     },
-    privacyPolicyVersion: opt(env.PRIVACY_POLICY_VERSION) ?? '2026-09-28',
     timezone: opt(env.VENUE_TIMEZONE) ?? 'Europe/Moscow',
   };
 }

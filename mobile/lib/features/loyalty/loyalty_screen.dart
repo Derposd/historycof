@@ -84,9 +84,27 @@ class LoyaltyScreen extends ConsumerWidget {
                   const Icon(Icons.info_outline_rounded, size: 18, color: HcColors.textSecondary),
                   const SizedBox(width: HcSpace.s),
                   Expanded(
-                    child: Text(
-                      'Покажите код бариста перед оплатой — бонусы начислятся или спишутся на кассе.',
-                      style: HcType.sans(size: 13, color: HcColors.textSecondary, height: 1.4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Покажите код бариста перед оплатой — бонусы начислятся или спишутся на кассе.',
+                          style: HcType.sans(size: 13, color: HcColors.textSecondary, height: 1.4),
+                        ),
+                        const SizedBox(height: 6),
+                        // Условия программы должны быть доступны участнику (ЗоЗПП, ст. 8–10)
+                        GestureDetector(
+                          onTap: () => context.push('/legal/loyalty'),
+                          child: Text(
+                            'Правила бонусной программы',
+                            style: HcType.sans(
+                              size: 13,
+                              color: HcColors.accentDark,
+                              weight: 600,
+                            ).copyWith(decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

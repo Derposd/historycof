@@ -8,7 +8,8 @@ abstract final class Links {
   static Uri whatsapp(String phoneE164, {String? text}) =>
       Uri.https('wa.me', '/${phoneE164.replaceAll(RegExp(r'\D'), '')}', text == null ? null : {'text': text});
 
-  static Uri instagram(String account) => Uri.https('instagram.com', '/$account/');
+  static Uri telegram(String name) => Uri.https('t.me', '/$name');
+  static Uri vk(String name) => Uri.https('vk.com', '/$name');
 
   static Uri yandexMaps({required String address, double? lat, double? lng}) => lat != null && lng != null
       ? Uri.https('yandex.ru', '/maps/', {'rtext': '~$lat,$lng', 'rtt': 'auto'})

@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
-import { APP_CONFIG, AppConfig } from '../config/configuration';
 import { DB, Db } from '../db/database.module';
 import { guests, staffUsers } from '../db/schema';
-import { normalizeRuPhone } from '../common/phone';
-import { GuestsService } from '../guests/guests.service';
+import { normalizeRuMobile } from '../common/phone';
+import { ConsentContext, GuestsService } from '../guests/guests.service';
+import { LEGAL_VERSION } from '../legal/documents';
 import { OtpService } from './otp.service';
 import { TokenPair, TokensService } from './tokens.service';
 
@@ -15,15 +15,16 @@ const DUMMY_HASH = bcrypt.hashSync('timing-equalizer', 10);
 export class AuthService {
   constructor(
     @Inject(DB) private readonly db: Db,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly otp: OtpService,
     private readonly tokens: TokensService,
     private readonly guestsService: GuestsService,
   ) {}
 
   private phoneOrThrow(raw: string): string {
-    const phone = normalizeRuPhone(raw);
-    if (!phone) throw new BadRequestException({ error: 'phone_invalid', message: 'Введите российский номер телефона' });
+    const phone = normalizeRuMobile(raw);
+    if (!phone) {
+      throw new BadRequestException({ error: 'phone_invalid', message: 'Введите российский мобильный номер: +7 9XX XXX-XX-XX' });
+    }
     return phone;
   }
 
@@ -34,11 +35,22 @@ export class AuthService {
       .from(guests)
       .where(and(eq(guests.phone, phone), isNull(guests.deletedAt)));
     const result = await this.otp.request(phone);
-    return { ...result, isNewUser: !existing, privacyPolicyVersion: this.config.privacyPolicyVersion };
+    return { ...result, isNewUser: !existing, legalVersion: LEGAL_VERSION };
   }
 
-  async verifyOtp(input: { phone: string; code: string; acceptPrivacyPolicy?: boolean; name?: string }) {
+  async verifyOtp(
+    input: {
+      phone: string;
+      code: string;
+      acceptPersonalData?: boolean;
+      acceptPrivacyPolicy?: boolean;
+      acceptMarketing?: boolean;
+      name?: string;
+    },
+    ctx: ConsentContext = {},
+  ) {
     const phone = this.phoneOrThrow(input.phone);
+    const acceptPd = input.acceptPersonalData ?? input.acceptPrivacyPolicy ?? false;
 
     const [existing] = await this.db
       .select()
@@ -46,7 +58,7 @@ export class AuthService {
       .where(and(eq(guests.phone, phone), isNull(guests.deletedAt)));
 
     // Согласие проверяем до проверки кода, чтобы не «сжечь» код на ошибке формы.
-    if (!existing && !input.acceptPrivacyPolicy) {
+    if (!existing && !acceptPd) {
       throw new BadRequestException({
         error: 'consent_required',
         message: 'Для регистрации необходимо согласие на обработку персональных данных',
@@ -63,7 +75,7 @@ export class AuthService {
         .update(guests)
         .set({
           lastSeenAt: now,
-          ...(input.acceptPrivacyPolicy ? { consentVersion: this.config.privacyPolicyVersion, consentAt: now } : {}),
+          ...(acceptPd ? { consentVersion: LEGAL_VERSION, consentAt: now } : {}),
         })
         .where(eq(guests.id, guestId));
     } else {
@@ -72,13 +84,18 @@ export class AuthService {
         .values({
           phone,
           name: input.name?.trim() || null,
-          consentVersion: this.config.privacyPolicyVersion,
+          consentVersion: LEGAL_VERSION,
           consentAt: now,
           lastSeenAt: now,
         })
         .returning({ id: guests.id });
       guestId = created.id;
     }
+
+    // Журнал согласий: на обработку ПДн — при регистрации или повторном подтверждении,
+    // на рекламу — только если гость отдельно отметил галочку
+    if (acceptPd) await this.guestsService.recordConsent(guestId, 'pd', ctx);
+    if (input.acceptMarketing) await this.guestsService.update(guestId, { pushNewsEnabled: true }, ctx);
 
     const pair = await this.tokens.issue({ typ: 'guest', sub: guestId });
     const profile = await this.guestsService.getProfile(guestId);

@@ -684,7 +684,7 @@ button.danger.solid:hover { background: #b5674a; }
 }
 .phone-push-icon {
   flex: none; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
-  background: var(--accent-dark); color: #fff; font-family: var(--serif); font-size: 17px;
+  overflow: hidden;
 }
 .phone-push-app { font-size: 10.5px; color: var(--text-2); }
 .phone-push-title { font-size: 12.5px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
@@ -724,3 +724,8 @@ button.waiting-item::after { display: none; }
   .quick-actions button { flex: 1; }
   .waiting-when { display: none; }
 }
+
+/* Пищевая ценность в редакторе позиции */
+.nutrition-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.nutrition-grid .field { gap: 4px; }
+@media (max-width: 860px) { .nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

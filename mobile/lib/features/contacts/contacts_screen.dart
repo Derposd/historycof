@@ -62,31 +62,34 @@ class ContactsScreen extends ConsumerWidget {
             padding: h,
             child: FadeSlideIn(
               index: 1,
+              // Связь: телефон, WhatsApp и, если указаны в админке, Telegram и ВКонтакте.
+              // Instagram не показываем: компания Meta признана в РФ экстремистской организацией.
               child: Row(
                 children: [
-                  Expanded(
-                    child: _ActionTile(
+                  for (final (i, tile) in [
+                    _ActionTile(
                       icon: Icons.call_outlined,
                       label: 'Позвонить',
                       onTap: () => openExternal(Links.call(venue.phone)),
                     ),
-                  ),
-                  const SizedBox(width: HcSpace.listGap),
-                  Expanded(
-                    child: _ActionTile(
+                    _ActionTile(
                       icon: Icons.chat_bubble_outline_rounded,
                       label: 'WhatsApp',
                       onTap: () => openExternal(Links.whatsapp(venue.whatsapp)),
                     ),
-                  ),
-                  const SizedBox(width: HcSpace.listGap),
-                  Expanded(
-                    child: _ActionTile(
-                      icon: Icons.photo_camera_outlined,
-                      label: 'Instagram',
-                      onTap: () => openExternal(Links.instagram(venue.instagram)),
-                    ),
-                  ),
+                    if (venue.telegram.isNotEmpty)
+                      _ActionTile(
+                        icon: Icons.send_rounded,
+                        label: 'Telegram',
+                        onTap: () => openExternal(Links.telegram(venue.telegram)),
+                      ),
+                    if (venue.vk.isNotEmpty)
+                      _ActionTile(
+                        icon: Icons.groups_outlined,
+                        label: 'ВКонтакте',
+                        onTap: () => openExternal(Links.vk(venue.vk)),
+                      ),
+                  ].indexed) ...[if (i > 0) const SizedBox(width: HcSpace.listGap), Expanded(child: tile)],
                 ],
               ),
             ),

@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsEmail,
   IsIn,
   IsLatitude,
   IsLongitude,
@@ -42,9 +43,16 @@ class UpdateVenueDto {
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lng !== null) @IsLongitude() lng?: number | null;
   @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'Телефон в формате +7XXXXXXXXXX' }) phone?: string;
   @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'WhatsApp в формате +7XXXXXXXXXX' }) whatsapp?: string;
-  @IsOptional() @Matches(/^[A-Za-z0-9._]{1,30}$/, { message: 'Instagram — имя аккаунта без @' }) instagram?: string;
+  @IsOptional() @Matches(/^([A-Za-z0-9_]{5,32})?$/, { message: 'Telegram — имя без @ (латиница, цифры, _)' }) telegram?: string;
+  @IsOptional() @Matches(/^([A-Za-z0-9_.]{2,50})?$/, { message: 'ВКонтакте — короткое имя сообщества' }) vk?: string;
   @IsOptional() @IsString() @MaxLength(200) website?: string;
   @IsOptional() @IsString() @MaxLength(200) legalName?: string;
+  @IsOptional() @Matches(/^(\d{10}|\d{12})?$/, { message: 'ИНН — 10 или 12 цифр' }) inn?: string;
+  @IsOptional() @Matches(/^(\d{13}|\d{15})?$/, { message: 'ОГРН — 13 цифр, ОГРНИП — 15' }) ogrn?: string;
+  @IsOptional() @IsString() @MaxLength(300) legalAddress?: string;
+  @IsOptional() @ValidateIf((o: UpdateVenueDto) => !!o.privacyEmail) @IsEmail({}, { message: 'Почта указана неверно' }) privacyEmail?: string;
+  @IsOptional() @IsString() @MaxLength(3000) processors?: string;
+  @IsOptional() @IsString() @MaxLength(20000) loyaltyRules?: string;
 
   @IsOptional()
   @IsArray()
@@ -85,5 +93,6 @@ export class AdminVenueController {
 @Module({
   controllers: [VenueController, AdminVenueController],
   providers: [VenueService],
+  exports: [VenueService],
 })
 export class VenueModule {}

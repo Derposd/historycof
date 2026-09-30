@@ -14,11 +14,27 @@ export interface VenueInfo {
   lng: number | null;
   phone: string;
   whatsapp: string;
-  instagram: string;
+  /** Telegram: имя канала/аккаунта без @ (необязательно). */
+  telegram: string;
+  /** ВКонтакте: короткое имя сообщества (необязательно). */
+  vk: string;
   website: string;
-  legalName: string;
   hours: DayHours[];
+  // ── Сведения о продавце (ЗоЗПП ст. 9) и об операторе ПДн (152-ФЗ) ──
+  legalName: string;
+  inn: string;
+  ogrn: string;
+  legalAddress: string;
+  /** Почта для запросов по персональным данным. */
+  privacyEmail: string;
+  /** Кому оператор поручает обработку ПДн — для политики и согласия; пусто — типовой перечень. */
+  processors: string;
+  /** Правила бонусной программы; пусто — типовой текст. */
+  loyaltyRules: string;
 }
+
+/** Поля, которые раньше были в настройках и больше не используются. */
+const REMOVED_FIELDS = ['instagram'];
 
 /** Данные из брифа заказчика (сверено с historycoffee.ru). */
 export const DEFAULT_VENUE: VenueInfo = {
@@ -29,9 +45,16 @@ export const DEFAULT_VENUE: VenueInfo = {
   lng: null,
   phone: '+79604316223',
   whatsapp: '+79604316223',
-  instagram: 'history.coffee.ru',
+  telegram: '',
+  vk: '',
   website: 'https://historycoffee.ru/',
   legalName: 'ИП Жабоева А. Т.',
+  inn: '',
+  ogrn: '',
+  legalAddress: '',
+  privacyEmail: '',
+  processors: '',
+  loyaltyRules: '',
   hours: [
     { day: 1, open: '08:00', close: '23:00' },
     { day: 2, open: '08:00', close: '23:00' },
@@ -54,7 +77,10 @@ export class VenueService {
 
   async get(): Promise<VenueInfo> {
     const [row] = await this.db.select().from(settings).where(eq(settings.key, KEY));
-    return { ...DEFAULT_VENUE, ...((row?.value as Partial<VenueInfo>) ?? {}) };
+    const stored = { ...((row?.value as Record<string, unknown>) ?? {}) };
+    // Instagram убран: Meta признана в РФ экстремистской организацией — ссылки и символику не показываем
+    for (const k of REMOVED_FIELDS) delete stored[k];
+    return { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
   }
 
   async getWithStatus(now = new Date()): Promise<VenueInfo & { timezone: string; openState: OpenState }> {

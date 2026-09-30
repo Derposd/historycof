@@ -75,10 +75,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) => _page(state, const MyFeedbackScreen()),
       ),
       GoRoute(
-        path: '/privacy',
+        path: '/legal/:kind',
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (_, state) => _page(state, const PrivacyScreen()),
+        pageBuilder: (_, state) => _page(state, LegalScreen(kind: state.pathParameters['kind']!)),
       ),
+      // Прежний адрес политики — оставлен для старых ссылок
+      GoRoute(path: '/privacy', parentNavigatorKey: rootNavigatorKey, redirect: (_, _) => '/legal/privacy'),
     ],
   );
 });

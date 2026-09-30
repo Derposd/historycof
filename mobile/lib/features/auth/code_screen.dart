@@ -39,7 +39,12 @@ class _CodeScreenState extends ConsumerState<CodeScreen> with SingleTickerProvid
   final _name = TextEditingController();
   late int _resendIn = widget.args.resendInSec;
   Timer? _timer;
+
+  /// Согласие на обработку ПДн — отдельный документ, обязательное (152-ФЗ, ред. с 01.09.2025).
   bool _consent = false;
+
+  /// Согласие на рекламу (новости и акции) — отдельное и необязательное (38-ФЗ ст. 18).
+  bool _marketing = false;
   bool _loading = false;
   String? _error;
 
@@ -82,7 +87,8 @@ class _CodeScreenState extends ConsumerState<CodeScreen> with SingleTickerProvid
           .verifyOtp(
             phone: widget.args.phone,
             code: _code.text,
-            acceptPrivacyPolicy: _needsConsent && _consent,
+            acceptPersonalData: _needsConsent && _consent,
+            acceptMarketing: _needsConsent && _marketing,
             name: widget.args.isNewUser == true ? _name.text : null,
           );
       if (!mounted) return;
@@ -188,7 +194,36 @@ class _CodeScreenState extends ConsumerState<CodeScreen> with SingleTickerProvid
               ],
               if (_needsConsent) ...[
                 const SizedBox(height: HcSpace.l),
-                _ConsentCheckbox(value: _consent, onChanged: (v) => setState(() => _consent = v)),
+                _ConsentCheckbox(
+                  value: _consent,
+                  onChanged: (v) => setState(() => _consent = v),
+                  lead: 'Даю ',
+                  link: 'согласие на обработку персональных данных',
+                  route: '/legal/consent',
+                  tail: ' (обязательно)',
+                ),
+                _ConsentCheckbox(
+                  value: _marketing,
+                  onChanged: (v) => setState(() => _marketing = v),
+                  lead: 'Хочу получать новости и акции кофейни — ',
+                  link: 'согласие на рекламу',
+                  route: '/legal/marketing',
+                  tail: ' (по желанию)',
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, top: 4),
+                  child: GestureDetector(
+                    onTap: () => context.push('/legal/privacy'),
+                    child: Text(
+                      'Политика обработки персональных данных',
+                      style: HcType.sans(
+                        size: 13,
+                        color: HcColors.accentDark,
+                        height: 1.4,
+                      ).copyWith(decoration: TextDecoration.underline),
+                    ),
+                  ),
+                ),
               ],
               const SizedBox(height: HcSpace.xl),
               FilledButton(
@@ -209,11 +244,23 @@ class _CodeScreenState extends ConsumerState<CodeScreen> with SingleTickerProvid
   }
 }
 
+/// Отдельная галочка согласия: по умолчанию снята, текст документа — по ссылке.
 class _ConsentCheckbox extends StatelessWidget {
-  const _ConsentCheckbox({required this.value, required this.onChanged});
+  const _ConsentCheckbox({
+    required this.value,
+    required this.onChanged,
+    required this.lead,
+    required this.link,
+    required this.route,
+    this.tail = '',
+  });
 
   final bool value;
   final ValueChanged<bool> onChanged;
+  final String lead;
+  final String link;
+  final String route;
+  final String tail;
 
   @override
   Widget build(BuildContext context) {
@@ -232,12 +279,13 @@ class _ConsentCheckbox extends StatelessWidget {
                   TextSpan(
                     style: base,
                     children: [
-                      const TextSpan(text: 'Я даю согласие на обработку персональных данных в соответствии с '),
+                      TextSpan(text: lead),
                       TextSpan(
-                        text: 'политикой конфиденциальности',
+                        text: link,
                         style: base.copyWith(color: HcColors.accentDark, decoration: TextDecoration.underline),
-                        recognizer: TapGestureRecognizer()..onTap = () => context.push('/privacy'),
+                        recognizer: TapGestureRecognizer()..onTap = () => context.push(route),
                       ),
+                      TextSpan(text: tail),
                     ],
                   ),
                 ),

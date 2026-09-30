@@ -27,6 +27,7 @@ export class AdminAnalyticsController {
       guestsActive7d,
       loyaltyLinked,
       devices,
+      marketingSubscribers,
       newsPublished,
       menuItemsTotal,
       feedbackOpen,
@@ -38,6 +39,8 @@ export class AdminAnalyticsController {
       one(this.db.select({ n: count() }).from(guests).where(and(active, gte(guests.lastSeenAt, weekAgo)))),
       one(this.db.select({ n: count() }).from(guests).where(and(active, isNotNull(guests.iikoCustomerId)))),
       one(this.db.select({ n: count() }).from(deviceTokens)),
+      // Гости с согласием на рекламу — столько человек получат новость уведомлением
+      one(this.db.select({ n: count() }).from(guests).where(and(active, eq(guests.pushNewsEnabled, true)))),
       one(this.db.select({ n: count() }).from(newsPosts).where(eq(newsPosts.status, 'published'))),
       one(this.db.select({ n: count() }).from(menuItems)),
       one(this.db.select({ n: count() }).from(feedback).where(sql`${feedback.status} <> 'answered'`)),
@@ -60,6 +63,7 @@ export class AdminAnalyticsController {
     return {
       guests: { total: guestsTotal, new30d: guestsNew30d, active7d: guestsActive7d, loyaltyLinked },
       devices,
+      marketingSubscribers,
       newsPublished,
       menuItems: menuItemsTotal,
       feedback: { open: feedbackOpen, last30dByType: feedbackByType },

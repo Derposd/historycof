@@ -93,21 +93,35 @@ class _HistoryCoffeeAppState extends ConsumerState<HistoryCoffeeApp> {
     );
   }
 
+  /// Документы обновились — согласие на обработку ПДн нужно дать заново (оно даётся
+  /// на конкретный текст). Без согласия пользоваться аккаунтом нельзя — предлагаем выйти.
   Future<void> _askConsentAgain() async {
     final context = rootNavigatorKey.currentContext;
     if (context == null) return;
+    final router = ref.read(routerProvider);
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (c) => AlertDialog(
-        title: const Text('Мы обновили политику'),
-        content: const Text(
-          'Пожалуйста, ознакомьтесь с обновлённой политикой обработки персональных данных и подтвердите согласие.',
+        title: const Text('Мы обновили документы'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Чтобы продолжить пользоваться аккаунтом, подтвердите согласие на обработку персональных данных.',
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => router.push('/legal/consent'),
+              child: const Text('Согласие на обработку данных'),
+            ),
+            TextButton(onPressed: () => router.push('/legal/privacy'), child: const Text('Политика обработки данных')),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => ref.read(routerProvider).push('/privacy'), child: const Text('Прочитать')),
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Выйти')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Согласен')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Выйти из аккаунта')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Даю согласие')),
         ],
       ),
     );

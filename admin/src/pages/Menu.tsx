@@ -292,7 +292,15 @@ function ItemEditor({
     imageUrl: item?.imageUrl ?? null,
     story: item?.story ?? '',
     available: item?.available ?? true,
+    allergens: item?.allergens ?? '',
   })
+  // Пищевая ценность — строками, чтобы поле можно было оставить пустым
+  const [nutrition, setNutrition] = useState(() => ({
+    kcal: item?.nutrition?.kcal?.toString() ?? '',
+    proteins: item?.nutrition?.proteins?.toString() ?? '',
+    fats: item?.nutrition?.fats?.toString() ?? '',
+    carbs: item?.nutrition?.carbs?.toString() ?? '',
+  }))
   const [prices, setPrices] = useState<MenuPrice[]>(item?.prices.length ? item.prices : [{ label: '', amount: 0 }])
   const [badges, setBadges] = useState<MenuBadge[]>(item?.badges ?? [])
   const [error, setError] = useState<string | null>(null)
@@ -300,8 +308,8 @@ function ItemEditor({
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
   // Есть ли несохранённые правки — сравниваем с тем, с чего открыли окно
-  const [initial] = useState(() => JSON.stringify({ form, prices, badges }))
-  const dirty = JSON.stringify({ form, prices, badges }) !== initial
+  const [initial] = useState(() => JSON.stringify({ form, prices, badges, nutrition }))
+  const dirty = JSON.stringify({ form, prices, badges, nutrition }) !== initial
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -316,6 +324,15 @@ function ItemEditor({
       description: form.description || null,
       portion: form.portion || null,
       story: form.story || null,
+      allergens: form.allergens.trim() || null,
+      nutrition: (() => {
+        const num = (v: string) => {
+          const x = Number(v.replace(',', '.'))
+          return v.trim() === '' || !Number.isFinite(x) ? null : x
+        }
+        const n = { kcal: num(nutrition.kcal), proteins: num(nutrition.proteins), fats: num(nutrition.fats), carbs: num(nutrition.carbs) }
+        return Object.values(n).some((v) => v !== null) ? n : null
+      })(),
       prices: prices.filter((p) => p.amount > 0),
       badges,
     }
@@ -374,6 +391,36 @@ function ItemEditor({
         <label className="field">
           <span className="caps">Выход</span>
           <input value={form.portion} onChange={(e) => set('portion', e.target.value)} placeholder="250 г / 300 мл" maxLength={40} />
+        </label>
+
+        <div className="field">
+          <span className="caps">Пищевая ценность на порцию</span>
+          <div className="nutrition-grid">
+            {(
+              [
+                ['kcal', 'ккал'],
+                ['proteins', 'белки, г'],
+                ['fats', 'жиры, г'],
+                ['carbs', 'углеводы, г'],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className="field">
+                <input
+                  inputMode="decimal"
+                  value={nutrition[k]}
+                  onChange={(e) => setNutrition((n) => ({ ...n, [k]: e.target.value.replace(/[^\d.,]/g, '') }))}
+                  placeholder="—"
+                />
+                <span className="muted small">{label}</span>
+              </label>
+            ))}
+          </div>
+          <span className="muted small">Необязательно. По правилам общепита гость вправе знать калорийность и БЖУ — если есть техкарта, заполните.</span>
+        </div>
+
+        <label className="field">
+          <span className="caps">Аллергены</span>
+          <input value={form.allergens} onChange={(e) => set('allergens', e.target.value)} placeholder="молоко, орехи, глютен" maxLength={300} />
         </label>
 
         <div className="field">

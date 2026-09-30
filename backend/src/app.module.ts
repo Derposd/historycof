@@ -17,6 +17,7 @@ import { PushModule } from './push/push.service';
 import { StaffModule } from './staff/staff.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { LegalModule } from './legal/legal.module';
+import { RetentionModule } from './retention/retention.module';
 import { HealthController } from './health/health.controller';
 
 @Module({})
@@ -52,6 +53,7 @@ export class AppModule {
         StaffModule,
         AnalyticsModule,
         LegalModule,
+        RetentionModule,
       ],
       controllers: [HealthController],
       providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

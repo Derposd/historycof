@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
@@ -16,6 +17,14 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { MENU_BADGES, MenuBadge } from '../db/schema';
+
+/** Пищевая ценность на порцию — все поля необязательны (ПП РФ № 1515). */
+export class MenuNutritionDto {
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) @Max(5000) kcal?: number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) @Max(1000) proteins?: number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) @Max(1000) fats?: number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) @Max(1000) carbs?: number | null;
+}
 
 export class MenuPriceDto {
   @IsString()
@@ -129,6 +138,16 @@ export class CreateItemDto {
   story?: string | null;
 
   @IsOptional()
+  @ValidateNested()
+  @Type(() => MenuNutritionDto)
+  nutrition?: MenuNutritionDto | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  allergens?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   available?: boolean;
 
@@ -178,6 +197,16 @@ export class UpdateItemDto {
   @IsString()
   @MaxLength(2000)
   story?: string | null;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MenuNutritionDto)
+  nutrition?: MenuNutritionDto | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  allergens?: string | null;
 
   @IsOptional()
   @IsBoolean()

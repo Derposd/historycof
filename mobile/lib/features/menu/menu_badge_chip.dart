@@ -4,7 +4,7 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import 'menu_models.dart';
 
-/// Бейджи меню: «NEW» и «Хит продаж» — приглушённое золото, «Выбор команды» — олива,
+/// Бейджи меню: «Новинка» и «Хит продаж» — приглушённое золото, «Выбор команды» — олива,
 /// «Блюдо с историей» — тонкая обводка с иконкой книги.
 class MenuBadgeChip extends StatelessWidget {
   const MenuBadgeChip(this.badge, {super.key, this.dense = false});

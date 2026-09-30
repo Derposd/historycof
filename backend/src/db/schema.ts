@@ -31,7 +31,8 @@ export const guests = pgTable('guests', {
   iikoCardTrack: text('iiko_card_track').unique(),
   consentVersion: text('consent_version'),
   consentAt: timestamp('consent_at', { withTimezone: true }),
-  pushNewsEnabled: boolean('push_news_enabled').notNull().default(true),
+  /** Новости и акции push-уведомлениями — только с отдельного согласия на рекламу (38-ФЗ, ст. 18). */
+  pushNewsEnabled: boolean('push_news_enabled').notNull().default(false),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: createdAt(),
@@ -151,6 +152,15 @@ export interface MenuPrice {
   amount: number;
 }
 
+export interface MenuNutrition {
+  /** ккал на порцию */
+  kcal?: number | null;
+  /** белки, жиры, углеводы, г */
+  proteins?: number | null;
+  fats?: number | null;
+  carbs?: number | null;
+}
+
 export const menuItems = pgTable(
   'menu_items',
   {
@@ -168,6 +178,10 @@ export const menuItems = pgTable(
     badges: text('badges').array().$type<MenuBadge[]>().notNull().default(sql`'{}'::text[]`),
     /** Легенда для бейджа «Блюдо с историей». */
     story: text('story'),
+    /** Пищевая ценность на порцию (ПП РФ № 1515 — информация о продукции общепита). */
+    nutrition: jsonb('nutrition').$type<MenuNutrition | null>(),
+    /** Аллергены: «молоко, орехи». */
+    allergens: text('allergens'),
     available: boolean('available').notNull().default(true),
     sort: integer('sort').notNull().default(0),
     createdAt: createdAt(),
@@ -202,6 +216,33 @@ export const feedback = pgTable(
     index('feedback_status_created_idx').on(t.status, t.createdAt),
     index('feedback_guest_idx').on(t.guestId),
   ],
+);
+
+// ─── Согласия гостей (152-ФЗ ст. 9, 38-ФЗ ст. 18) ─────────────────────────────
+
+/**
+ * Журнал согласий — доказательство их получения (обязанность оператора и рекламораспространителя).
+ * pd — на обработку персональных данных, marketing — на получение рекламы (новости и акции).
+ * Отзыв — revoked_at; строки не удаляются, пока жив аккаунт.
+ */
+export const consentKind = pgEnum('consent_kind', ['pd', 'marketing']);
+
+export const consents = pgTable(
+  'consents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    guestId: uuid('guest_id')
+      .notNull()
+      .references(() => guests.id, { onDelete: 'cascade' }),
+    kind: consentKind('kind').notNull(),
+    /** Версия текста документа, на который дано согласие. */
+    version: text('version').notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+  },
+  (t) => [index('consents_guest_kind_idx').on(t.guestId, t.kind)],
 );
 
 // ─── Настройки заведения (контакты, часы работы) ──────────────────────────────

@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -81,5 +81,29 @@ export class StorageService {
     await writeFile(path, processed);
     this.logger.debug(`Сохранено локально: ${key}`);
     return `${this.config.publicUrl.replace(/\/$/, '')}/uploads/${key}`;
+  }
+
+  /**
+   * Удаляет загруженную картинку по её публичному адресу — например, фото из обращения
+   * удалённого гостя (152-ФЗ: уничтожение данных). Чужие адреса и ошибки игнорирует.
+   */
+  async deleteByUrl(url: string | null | undefined): Promise<void> {
+    if (!url) return;
+    try {
+      if (this.s3) {
+        const base = `${this.config.storage.s3PublicBaseUrl!.replace(/\/$/, '')}/`;
+        if (!url.startsWith(base)) return;
+        await this.s3.send(new DeleteObjectCommand({ Bucket: this.config.storage.s3Bucket, Key: url.slice(base.length) }));
+      } else {
+        const marker = '/uploads/';
+        const i = url.indexOf(marker);
+        if (i < 0) return;
+        const key = url.slice(i + marker.length);
+        if (key.includes('..')) return;
+        await rm(join(this.localDir, key), { force: true });
+      }
+    } catch (e) {
+      this.logger.warn(`Не удалось удалить файл ${url}: ${String(e)}`);
+    }
   }
 }

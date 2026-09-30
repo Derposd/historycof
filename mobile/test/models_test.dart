@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:history_coffee/core/api/api_exception.dart';
+import 'package:history_coffee/core/auth/guest_profile.dart';
 import 'package:history_coffee/core/utils/launch.dart';
 import 'package:history_coffee/features/feedback/feedback.dart';
 import 'package:history_coffee/features/menu/menu_models.dart';
@@ -80,10 +81,11 @@ void main() {
   });
 
   group('Links', () {
-    test('звонок и WhatsApp', () {
+    test('звонок, WhatsApp, Telegram, ВКонтакте', () {
       expect(Links.call('+79604316223').toString(), 'tel:+79604316223');
       expect(Links.whatsapp('+79604316223').toString(), 'https://wa.me/79604316223');
-      expect(Links.instagram('history.coffee.ru').toString(), 'https://instagram.com/history.coffee.ru/');
+      expect(Links.telegram('historycoffee').toString(), 'https://t.me/historycoffee');
+      expect(Links.vk('historycoffee').toString(), 'https://vk.com/historycoffee');
     });
 
     test('маршрут по адресу, пока нет координат', () {
@@ -101,6 +103,25 @@ void main() {
         Links.twoGis(address: '', lat: 43.48, lng: 43.6).toString(),
         'https://2gis.ru/routeSearch/rsType/car/to/43.6,43.48',
       );
+    });
+  });
+
+  group('законы РФ', () {
+    test('бейдж «Новинка» — по-русски', () {
+      expect(MenuBadge.fromCode('new')!.label, 'Новинка');
+    });
+
+    test('пищевая ценность: пустая — не показываем', () {
+      expect(MenuNutrition.fromJson(null), isNull);
+      expect(MenuNutrition.fromJson({'kcal': null}), isNull);
+      final n = MenuNutrition.fromJson({'kcal': 412, 'proteins': 18.5})!;
+      expect(n.kcal, 412);
+      expect(n.proteins, 18.5);
+      expect(n.fats, isNull);
+    });
+
+    test('согласие на рекламу по умолчанию не дано', () {
+      expect(GuestProfile.fromJson({'id': 'g', 'phone': '+79990000001'}).pushNewsEnabled, isFalse);
     });
   });
 }

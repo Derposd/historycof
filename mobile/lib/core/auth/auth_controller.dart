@@ -53,7 +53,8 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
   Future<GuestProfile> verifyOtp({
     required String phone,
     required String code,
-    bool acceptPrivacyPolicy = false,
+    bool acceptPersonalData = false,
+    bool acceptMarketing = false,
     String? name,
   }) async {
     final json = await ref
@@ -64,7 +65,8 @@ class AuthController extends AsyncNotifier<GuestProfile?> {
           data: {
             'phone': phone,
             'code': code,
-            if (acceptPrivacyPolicy) 'acceptPrivacyPolicy': true,
+            if (acceptPersonalData) 'acceptPersonalData': true,
+            if (acceptMarketing) 'acceptMarketing': true,
             if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
           },
         );

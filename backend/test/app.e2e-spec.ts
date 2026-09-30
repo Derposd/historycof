@@ -10,6 +10,7 @@ import { AppModule } from '../src/app.module';
 import { SMS_PROVIDER, SmsProvider } from '../src/auth/sms/sms.provider';
 import { loadConfig } from '../src/config/configuration';
 import { runMigrations } from '../src/db/migrate';
+import { RetentionService } from '../src/retention/retention.service';
 import { configureApp } from '../src/main';
 
 const DATABASE_URL = process.env.DATABASE_URL_TEST ?? 'postgres://history:history@localhost:5432/history_test';
@@ -81,7 +82,6 @@ describe('History Coffee API (e2e)', () => {
       expect(res.body).toMatchObject({
         address: 'г. Нальчик, ул. Толстого, 43',
         phone: '+79604316223',
-        instagram: 'history.coffee.ru',
         timezone: 'Europe/Moscow',
       });
       expect(typeof res.body.openState.isOpen).toBe('boolean');
@@ -410,6 +410,136 @@ describe('History Coffee API (e2e)', () => {
       const img = await http.get(path).expect(200);
       const meta = await sharp(img.body as Buffer).metadata();
       expect(meta.width).toBe(1600);
+    });
+  });
+
+  describe('законы РФ', () => {
+    const q = async (sql: string, params: unknown[] = []) => {
+      const pg = new Client({ connectionString: DATABASE_URL });
+      await pg.connect();
+      try {
+        return (await pg.query(sql, params)).rows;
+      } finally {
+        await pg.end();
+      }
+    };
+
+    it('вход только по российскому мобильному номеру (149-ФЗ, 406-ФЗ)', async () => {
+      // Казахстан тоже +7, но 7xx — не пускаем; городской 495 — тоже нет
+      for (const phone of ['+77011234567', '+74951234567']) {
+        const res = await http.post('/api/v1/auth/otp/request').send({ phone }).expect(400);
+        expect(res.body.error).toBe('phone_invalid');
+      }
+    });
+
+    it('согласие на ПДн записывается в журнал; реклама — только отдельно и по желанию', async () => {
+      const a = await loginGuest('9005550101', { acceptPersonalData: true });
+      const me = await http.get('/api/v1/me').set('Authorization', `Bearer ${a.accessToken}`).expect(200);
+      expect(me.body.pushNewsEnabled).toBe(false);
+      expect(me.body.consentRequired).toBe(false);
+      const rows = await q('select kind, version, revoked_at, user_agent from consents where guest_id = $1', [a.guest.id]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ kind: 'pd', revoked_at: null });
+
+      const b = await loginGuest('9005550102', { acceptPersonalData: true, acceptMarketing: true });
+      const meB = await http.get('/api/v1/me').set('Authorization', `Bearer ${b.accessToken}`).expect(200);
+      expect(meB.body.pushNewsEnabled).toBe(true);
+      const kinds = (await q('select kind from consents where guest_id = $1 and revoked_at is null', [b.guest.id])).map(
+        (r: { kind: string }) => r.kind,
+      );
+      expect(kinds.sort()).toEqual(['marketing', 'pd']);
+
+      // Отзыв согласия на рекламу — выключатель в профиле
+      await http.patch('/api/v1/me').set('Authorization', `Bearer ${b.accessToken}`).send({ pushNewsEnabled: false }).expect(200);
+      const active = await q("select 1 from consents where guest_id = $1 and kind = 'marketing' and revoked_at is null", [b.guest.id]);
+      expect(active).toHaveLength(0);
+    });
+
+    it('устройства для уведомлений — только у вошедших гостей', () =>
+      http.post('/api/v1/devices').send({ token: 'anon-token', platform: 'android' }).expect(401));
+
+    it('документы: политика, согласие, реклама, правила бонусов; есть HTML-страницы', async () => {
+      for (const kind of ['privacy', 'consent', 'marketing', 'loyalty']) {
+        const res = await http.get(`/api/v1/legal/${kind}`).expect(200);
+        expect(res.body.markdown.length).toBeGreaterThan(200);
+        expect(res.body.version).toBeTruthy();
+      }
+      const consent = await http.get('/api/v1/legal/consent').expect(200);
+      expect(consent.body.markdown).toContain('Отзыв согласия');
+      const page = await http.get('/api/v1/legal/privacy/page').expect(200);
+      expect(page.headers['content-type']).toContain('text/html');
+      expect(page.text).toContain('152-ФЗ');
+      await http.get('/api/v1/legal/unknown').expect(404);
+    });
+
+    it('Instagram не показываем, даже если он остался в старых настройках', async () => {
+      await q(
+        `insert into settings (key, value) values ('venue', '{"instagram":"old.account","telegram":"historycoffee"}')
+         on conflict (key) do update set value = excluded.value`,
+      );
+      const res = await http.get('/api/v1/venue').expect(200);
+      expect(res.body.instagram).toBeUndefined();
+      expect(res.body.telegram).toBe('historycoffee');
+    });
+
+    it('реквизиты продавца попадают в документы', async () => {
+      await http
+        .put('/api/v1/admin/venue')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ inn: '071234567890', ogrn: '312072100012345', legalAddress: 'г. Нальчик', privacyEmail: 'pd@historycoffee.ru' })
+        .expect(200);
+      const res = await http.get('/api/v1/legal/privacy').expect(200);
+      expect(res.body.markdown).toContain('071234567890');
+      expect(res.body.markdown).toContain('pd@historycoffee.ru');
+      await http.put('/api/v1/admin/venue').set('Authorization', `Bearer ${staffToken}`).send({ inn: '123' }).expect(400);
+    });
+
+    it('удаление аккаунта убирает телефон из его обращений', async () => {
+      const g = await loginGuest('9005550103', { acceptPersonalData: true });
+      await http
+        .post('/api/v1/feedback')
+        .set('Authorization', `Bearer ${g.accessToken}`)
+        .field('type', 'complaint')
+        .field('message', 'Проверка удаления данных')
+        .field('contactPhone', '+79005550103')
+        .expect(201);
+      await http.delete('/api/v1/me').set('Authorization', `Bearer ${g.accessToken}`).expect(204);
+      const rows = await q('select contact_phone from feedback where guest_id = $1', [g.guest.id]);
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((r: { contact_phone: string | null }) => r.contact_phone === null)).toBe(true);
+      const consents = await q('select 1 from consents where guest_id = $1 and revoked_at is null', [g.guest.id]);
+      expect(consents).toHaveLength(0);
+    });
+
+    it('пищевая ценность и аллергены позиции меню', async () => {
+      const menu = await http.get('/api/v1/admin/menu').set('Authorization', `Bearer ${staffToken}`).expect(200);
+      const categoryId = menu.body[0].categories[0].id as string;
+      const item = await http
+        .post('/api/v1/admin/menu/items')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          categoryId,
+          title: 'Сырники',
+          portion: '220 г',
+          prices: [{ label: '', amount: 390 }],
+          nutrition: { kcal: 412, proteins: 18.5, fats: 16, carbs: 44 },
+          allergens: 'молоко, яйца, глютен',
+        })
+        .expect(201);
+      expect(item.body.nutrition).toEqual({ kcal: 412, proteins: 18.5, fats: 16, carbs: 44 });
+      const pub = await http.get('/api/v1/menu').expect(200);
+      const found = pub.body.sections
+        .flatMap((s: { categories: { items: { id: string }[] }[] }) => s.categories.flatMap((c) => c.items))
+        .find((i: { id: string }) => i.id === item.body.id);
+      expect(found).toMatchObject({ allergens: 'молоко, яйца, глютен', nutrition: { kcal: 412 } });
+    });
+
+    it('сроки хранения: старые коды подтверждения удаляются', async () => {
+      await q("insert into otp_codes (phone, code_hash, expires_at, created_at) values ('+79005550199', 'x', now(), now() - interval '2 days')");
+      const res = await app.get(RetentionService).run();
+      expect(res.otp).toBeGreaterThan(0);
+      const left = await q("select 1 from otp_codes where phone = '+79005550199'");
+      expect(left).toHaveLength(0);
     });
   });
 });

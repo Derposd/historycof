@@ -1,7 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
-import { CurrentPrincipal, GuestGuard, GuestPrincipal, OptionalGuestGuard, Principal } from '../common/auth';
-import { GuestsService } from './guests.service';
+import { CurrentPrincipal, GuestGuard, GuestPrincipal } from '../common/auth';
+import { ConsentContext, GuestsService } from './guests.service';
+
+export const consentContext = (req: Request): ConsentContext => ({
+  ip: req.ip ?? null,
+  userAgent: req.headers['user-agent'] ?? null,
+});
 
 class UpdateProfileDto {
   @IsOptional()
@@ -13,6 +19,7 @@ class UpdateProfileDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Дата в формате ГГГГ-ММ-ДД' })
   birthday?: string | null;
 
+  /** true — согласие на получение рекламы (новостей и акций), false — отзыв. */
   @IsOptional()
   @IsBoolean()
   pushNewsEnabled?: boolean;
@@ -38,14 +45,14 @@ export class MeController {
   }
 
   @Patch()
-  update(@CurrentPrincipal() p: GuestPrincipal, @Body() dto: UpdateProfileDto) {
-    return this.guests.update(p.sub, dto);
+  update(@CurrentPrincipal() p: GuestPrincipal, @Body() dto: UpdateProfileDto, @Req() req: Request) {
+    return this.guests.update(p.sub, dto, consentContext(req));
   }
 
   @Post('consent')
   @HttpCode(200)
-  consent(@CurrentPrincipal() p: GuestPrincipal) {
-    return this.guests.acceptConsent(p.sub);
+  consent(@CurrentPrincipal() p: GuestPrincipal, @Req() req: Request) {
+    return this.guests.acceptConsent(p.sub, consentContext(req));
   }
 
   @Delete()
@@ -55,16 +62,20 @@ export class MeController {
   }
 }
 
-/** FCM-токены. Анонимные устройства тоже регистрируются — чтобы получать новости без входа. */
+/**
+ * Токены устройств для уведомлений — только для вошедших гостей: новости и акции уходят
+ * лишь давшим согласие на рекламу, служебные — владельцу аккаунта. Анонимные устройства
+ * не регистрируются (без согласия рекламу слать нельзя, 38-ФЗ ст. 18).
+ */
 @Controller('devices')
-@UseGuards(OptionalGuestGuard)
+@UseGuards(GuestGuard)
 export class DevicesController {
   constructor(private readonly guests: GuestsService) {}
 
   @Post()
   @HttpCode(204)
-  async register(@CurrentPrincipal() p: Principal | undefined, @Body() dto: RegisterDeviceDto) {
-    await this.guests.registerDevice(dto.token, dto.platform, p?.sub ?? null);
+  async register(@CurrentPrincipal() p: GuestPrincipal, @Body() dto: RegisterDeviceDto) {
+    await this.guests.registerDevice(dto.token, dto.platform, p.sub);
   }
 
   @Delete(':token')

@@ -31,7 +31,16 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
     super.dispose();
   }
 
-  bool get _valid => phoneDigits(_phone.text).length == 10;
+  // Вход — только по российскому мобильному номеру (+7 9XX…): требование 149-ФЗ (ред. 406-ФЗ)
+  bool get _valid {
+    final d = phoneDigits(_phone.text);
+    return d.length == 10 && d.startsWith('9');
+  }
+
+  String? get _hint {
+    final d = phoneDigits(_phone.text);
+    return d.isNotEmpty && !d.startsWith('9') ? 'Нужен российский мобильный номер: +7 9XX XXX-XX-XX' : null;
+  }
 
   Future<void> _submit() async {
     if (!_valid || _loading) return;
@@ -78,7 +87,8 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
               Text('Вход', style: HcType.serif(size: 38, weight: 600)),
               const SizedBox(height: HcSpace.s),
               Text(
-                'Номер телефона станет вашей бонусной картой. Пришлём SMS с кодом.',
+                'Номер телефона станет вашей бонусной картой. Пришлём SMS с кодом. '
+                'Вход — по российскому мобильному номеру.',
                 style: HcType.sans(color: HcColors.textSecondary),
               ),
               const SizedBox(height: HcSpace.xl),
@@ -92,7 +102,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
                 autofillHints: const [AutofillHints.telephoneNumber],
                 inputFormatters: [RuPhoneInputFormatter()],
                 style: HcType.sans(size: 20, weight: 500, letterSpacing: 0.5),
-                decoration: InputDecoration(hintText: '+7 (___) ___-__-__', errorText: _error),
+                decoration: InputDecoration(hintText: '+7 (9__) ___-__-__', errorText: _error ?? _hint),
                 onChanged: (_) => setState(() => _error = null),
                 onSubmitted: (_) => _submit(),
               ),

@@ -118,14 +118,20 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <span className="caps">WhatsApp</span>
             <input value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} placeholder="+79604316223" required />
           </label>
-          <label className="field">
-            <span className="caps">Instagram (без @)</span>
-            <input value={form.instagram} onChange={(e) => set('instagram', e.target.value)} required />
-          </label>
-          <label className="field">
-            <span className="caps">Юрлицо (подвал приложения)</span>
-            <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} />
-          </label>
+          <div className="row">
+            <label className="field" style={{ flex: 1 }}>
+              <span className="caps">Telegram (без @, необязательно)</span>
+              <input value={form.telegram} onChange={(e) => set('telegram', e.target.value.replace(/^@/, ''))} placeholder="historycoffee" />
+            </label>
+            <label className="field" style={{ flex: 1 }}>
+              <span className="caps">ВКонтакте (короткое имя)</span>
+              <input value={form.vk} onChange={(e) => set('vk', e.target.value)} placeholder="historycoffee" />
+            </label>
+          </div>
+          <span className="muted small">
+            Instagram в приложении не показываем: компания Meta признана в РФ экстремистской организацией, за её
+            символику штрафуют.
+          </span>
         </div>
 
         <div className="card stack">
@@ -170,6 +176,64 @@ function VenueForm({ initial }: { initial: VenueT }) {
             })}
         </div>
       </div>
+
+      <div className="card stack" style={{ marginTop: 16 }}>
+        <h3>Продавец и документы</h3>
+        <span className="muted small">
+          Эти сведения показываются в приложении (закон о защите прав потребителей) и подставляются в политику
+          обработки персональных данных, согласие и правила бонусной программы.
+        </span>
+        <div className="grid grid-2" style={{ gap: 12 }}>
+          <label className="field">
+            <span className="caps">Наименование (ИП или организация)</span>
+            <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} required />
+          </label>
+          <label className="field">
+            <span className="caps">Почта для запросов по персональным данным</span>
+            <input type="email" value={form.privacyEmail} onChange={(e) => set('privacyEmail', e.target.value)} placeholder="pd@historycoffee.ru" />
+          </label>
+          <label className="field">
+            <span className="caps">ИНН</span>
+            <input value={form.inn} onChange={(e) => set('inn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={12} placeholder="10 или 12 цифр" />
+          </label>
+          <label className="field">
+            <span className="caps">ОГРН / ОГРНИП</span>
+            <input value={form.ogrn} onChange={(e) => set('ogrn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={15} placeholder="13 или 15 цифр" />
+          </label>
+        </div>
+        <label className="field">
+          <span className="caps">Адрес регистрации</span>
+          <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} placeholder="Как в выписке ЕГРИП / ЕГРЮЛ" />
+        </label>
+        <label className="field">
+          <span className="caps">Кому передаются данные гостей (для согласия и политики)</span>
+          <textarea
+            value={form.processors}
+            onChange={(e) => set('processors', e.target.value)}
+            rows={4}
+            placeholder={'- ООО «…» (iiko) — ведение бонусного счёта\n- ООО «…» — отправка SMS с кодом\n- ООО «…» — хостинг в РФ'}
+          />
+          <span className="muted small">По строке на каждого: наименование и что делает. Пусто — в документах будет типовой перечень без названий.</span>
+        </label>
+        <label className="field">
+          <span className="caps">Правила бонусной программы</span>
+          <textarea
+            value={form.loyaltyRules}
+            onChange={(e) => set('loyaltyRules', e.target.value)}
+            rows={6}
+            placeholder="Процент начисления, какую часть заказа можно оплатить бонусами, срок действия бонусов…"
+          />
+          <span className="muted small">Пусто — в приложении будут типовые правила без процентов и сроков.</span>
+        </label>
+        <div className="row" style={{ gap: 14 }}>
+          {(['privacy', 'consent', 'marketing', 'loyalty'] as const).map((k) => (
+            <a key={k} href={`/api/v1/legal/${k}/page`} target="_blank" rel="noreferrer" className="small">
+              {{ privacy: 'Политика', consent: 'Согласие на обработку', marketing: 'Согласие на рекламу', loyalty: 'Правила бонусов' }[k]} ↗
+            </a>
+          ))}
+        </div>
+      </div>
+
       <div className="save-bar">
         {msg && <div className={`save-msg ${msg.ok ? 'small' : 'error'}`}>{msg.text}</div>}
         <BusyButton type="submit" busy={busy} disabled={!dirty}>

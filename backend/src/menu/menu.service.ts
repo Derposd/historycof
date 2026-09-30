@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { DB, Db } from '../db/database.module';
-import { MenuBadge, menuCategories, MenuItem, menuItems, MenuPrice, menuSections } from '../db/schema';
+import { MenuBadge, menuCategories, MenuItem, menuItems, MenuNutrition, MenuPrice, menuSections } from '../db/schema';
 import {
   CreateCategoryDto,
   CreateItemDto,
@@ -20,6 +20,8 @@ export interface PublicMenuItem {
   prices: MenuPrice[];
   badges: MenuBadge[];
   story: string | null;
+  nutrition: MenuNutrition | null;
+  allergens: string | null;
 }
 
 export interface PublicMenu {
@@ -73,6 +75,8 @@ export class MenuService {
                     prices: i.prices,
                     badges: i.badges,
                     story: i.story,
+                    nutrition: i.nutrition ?? null,
+                    allergens: i.allergens,
                   };
                 }),
             };
@@ -186,6 +190,8 @@ export class MenuService {
         prices: normalizePrices(dto.prices),
         badges: uniqueBadges(dto.badges ?? []),
         story: dto.story?.trim() || null,
+        nutrition: cleanNutrition(dto.nutrition),
+        allergens: dto.allergens?.trim() || null,
         available: dto.available ?? true,
         sort: dto.sort ?? 0,
       })
@@ -204,6 +210,8 @@ export class MenuService {
     if (dto.prices !== undefined) values.prices = normalizePrices(dto.prices);
     if (dto.badges !== undefined) values.badges = uniqueBadges(dto.badges);
     if (dto.story !== undefined) values.story = dto.story?.trim() || null;
+    if (dto.nutrition !== undefined) values.nutrition = cleanNutrition(dto.nutrition);
+    if (dto.allergens !== undefined) values.allergens = dto.allergens?.trim() || null;
     if (dto.available !== undefined) values.available = dto.available;
     if (dto.sort !== undefined) values.sort = dto.sort;
     const [i] = await this.db.update(menuItems).set(values).where(eq(menuItems.id, id)).returning();
@@ -245,4 +253,15 @@ function normalizePrices(prices: MenuPrice[]): MenuPrice[] {
 
 function uniqueBadges(badges: MenuBadge[]): MenuBadge[] {
   return [...new Set(badges)];
+}
+
+/** Пустые значения пищевой ценности убираем; если не указано ничего — null. */
+function cleanNutrition(n: MenuNutrition | null | undefined): MenuNutrition | null {
+  if (!n) return null;
+  const out: MenuNutrition = {};
+  for (const k of ['kcal', 'proteins', 'fats', 'carbs'] as const) {
+    const v = n[k];
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = Math.round(v * 10) / 10;
+  }
+  return Object.keys(out).length ? out : null;
 }

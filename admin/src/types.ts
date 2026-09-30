@@ -28,13 +28,21 @@ export type MenuBadge = 'team_choice' | 'bestseller' | 'new' | 'story'
 export const BADGE_LABELS: Record<MenuBadge, string> = {
   team_choice: 'Выбор команды',
   bestseller: 'Хит продаж',
-  new: 'NEW',
+  new: 'Новинка',
   story: 'Блюдо с историей',
 }
 
 export interface MenuPrice {
   label: string
   amount: number
+}
+
+/** Пищевая ценность на порцию (ПП РФ № 1515) */
+export interface MenuNutrition {
+  kcal?: number | null
+  proteins?: number | null
+  fats?: number | null
+  carbs?: number | null
 }
 
 export interface MenuItem {
@@ -47,6 +55,8 @@ export interface MenuItem {
   prices: MenuPrice[]
   badges: MenuBadge[]
   story: string | null
+  nutrition: MenuNutrition | null
+  allergens: string | null
   available: boolean
   sort: number
 }
@@ -113,15 +123,24 @@ export interface Venue {
   lng: number | null
   phone: string
   whatsapp: string
-  instagram: string
+  telegram: string
+  vk: string
   website: string
-  legalName: string
   hours: DayHours[]
+  legalName: string
+  inn: string
+  ogrn: string
+  legalAddress: string
+  privacyEmail: string
+  processors: string
+  loyaltyRules: string
 }
 
 export interface AnalyticsSummary {
   guests: { total: number; new30d: number; active7d: number; loyaltyLinked: number }
   devices: number
+  /** Гости с согласием на рекламу — получат новости уведомлением */
+  marketingSubscribers: number
   newsPublished: number
   menuItems: number
   feedback: { open: number; last30dByType: { type: FeedbackType; n: number }[] }

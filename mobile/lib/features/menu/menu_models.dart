@@ -6,7 +6,8 @@ import '../../core/utils/format.dart';
 enum MenuBadge {
   teamChoice('team_choice', 'Выбор команды'),
   bestseller('bestseller', 'Хит продаж'),
-  isNew('new', 'NEW'),
+  // По закону о русском языке (168-ФЗ, с 01.03.2026) надписи для покупателей — по-русски
+  isNew('new', 'Новинка'),
   story('story', 'Блюдо с историей');
 
   const MenuBadge(this.code, this.label);
@@ -28,6 +29,25 @@ class MenuPrice {
       MenuPrice(label: j['label'] as String? ?? '', amount: (j['amount'] as num).toInt());
 }
 
+/// Пищевая ценность на порцию (ПП РФ № 1515): все поля необязательны.
+class MenuNutrition {
+  const MenuNutrition({this.kcal, this.proteins, this.fats, this.carbs});
+
+  final double? kcal;
+  final double? proteins;
+  final double? fats;
+  final double? carbs;
+
+  bool get isEmpty => kcal == null && proteins == null && fats == null && carbs == null;
+
+  static MenuNutrition? fromJson(Map<String, dynamic>? j) {
+    if (j == null) return null;
+    double? n(String k) => (j[k] as num?)?.toDouble();
+    final v = MenuNutrition(kcal: n('kcal'), proteins: n('proteins'), fats: n('fats'), carbs: n('carbs'));
+    return v.isEmpty ? null : v;
+  }
+}
+
 class MenuItem {
   const MenuItem({
     required this.id,
@@ -38,6 +58,8 @@ class MenuItem {
     this.prices = const [],
     this.badges = const [],
     this.story,
+    this.nutrition,
+    this.allergens,
   });
 
   final String id;
@@ -48,6 +70,8 @@ class MenuItem {
   final List<MenuPrice> prices;
   final List<MenuBadge> badges;
   final String? story;
+  final MenuNutrition? nutrition;
+  final String? allergens;
 
   /// «270 / 290 ₽» — компактная строка цен для карточки.
   String get priceLine {
@@ -70,6 +94,8 @@ class MenuItem {
         .whereType<MenuBadge>()
         .toList(),
     story: j['story'] as String?,
+    nutrition: MenuNutrition.fromJson(j['nutrition'] as Map<String, dynamic>?),
+    allergens: j['allergens'] as String?,
   );
 }
 

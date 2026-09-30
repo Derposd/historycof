@@ -1,18 +1,28 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
-import { APP_CONFIG, AppConfig } from '../config/configuration';
 import { DB, Db } from '../db/database.module';
-import { deviceTokens, guests, refreshTokens } from '../db/schema';
+import { consents, deviceTokens, feedback, guests, refreshTokens } from '../db/schema';
+import { LEGAL_VERSION } from '../legal/documents';
+import { StorageService } from '../storage/storage.service';
+
+/** Откуда дано согласие — для журнала (доказательство получения согласия). */
+export interface ConsentContext {
+  ip?: string | null;
+  userAgent?: string | null;
+}
 
 export interface GuestProfile {
   id: string;
   phone: string;
   name: string | null;
   birthday: string | null;
+  /** Новости и акции push-уведомлениями — есть действующее согласие на рекламу. */
   pushNewsEnabled: boolean;
   consentVersion: string | null;
-  /** true — политика обновилась, нужно повторно запросить согласие. */
+  /** true — тексты документов обновились, нужно заново получить согласие на обработку ПДн. */
   consentRequired: boolean;
+  /** Текущая версия юридических документов. */
+  legalVersion: string;
   createdAt: string;
 }
 
@@ -20,8 +30,32 @@ export interface GuestProfile {
 export class GuestsService {
   constructor(
     @Inject(DB) private readonly db: Db,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly storage: StorageService,
   ) {}
+
+  /** Записывает согласие в журнал; прежнее действующее согласие того же вида закрывается. */
+  async recordConsent(guestId: string, kind: 'pd' | 'marketing', ctx: ConsentContext = {}): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(consents)
+      .set({ revokedAt: now })
+      .where(and(eq(consents.guestId, guestId), eq(consents.kind, kind), isNull(consents.revokedAt)));
+    await this.db.insert(consents).values({
+      guestId,
+      kind,
+      version: LEGAL_VERSION,
+      grantedAt: now,
+      ip: ctx.ip?.slice(0, 64) ?? null,
+      userAgent: ctx.userAgent?.slice(0, 300) ?? null,
+    });
+  }
+
+  async revokeConsent(guestId: string, kind: 'pd' | 'marketing'): Promise<void> {
+    await this.db
+      .update(consents)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(consents.guestId, guestId), eq(consents.kind, kind), isNull(consents.revokedAt)));
+  }
 
   async getProfile(guestId: string): Promise<GuestProfile> {
     const [g] = await this.db
@@ -36,7 +70,8 @@ export class GuestsService {
       birthday: g.birthday,
       pushNewsEnabled: g.pushNewsEnabled,
       consentVersion: g.consentVersion,
-      consentRequired: g.consentVersion !== this.config.privacyPolicyVersion,
+      consentRequired: g.consentVersion !== LEGAL_VERSION,
+      legalVersion: LEGAL_VERSION,
       createdAt: g.createdAt.toISOString(),
     };
   }
@@ -44,7 +79,9 @@ export class GuestsService {
   async update(
     guestId: string,
     patch: { name?: string | null; birthday?: string | null; pushNewsEnabled?: boolean },
+    ctx: ConsentContext = {},
   ): Promise<GuestProfile> {
+    const before = await this.getProfile(guestId);
     const values: Partial<typeof guests.$inferInsert> = {};
     if (patch.name !== undefined) values.name = patch.name?.trim() || null;
     if (patch.birthday !== undefined) values.birthday = patch.birthday || null;
@@ -55,14 +92,19 @@ export class GuestsService {
         .set(values)
         .where(and(eq(guests.id, guestId), isNull(guests.deletedAt)));
     }
+    // Включение «Новостей и акций» — это согласие на рекламу (38-ФЗ ст. 18), выключение — его отзыв
+    if (patch.pushNewsEnabled === true && !before.pushNewsEnabled) await this.recordConsent(guestId, 'marketing', ctx);
+    if (patch.pushNewsEnabled === false && before.pushNewsEnabled) await this.revokeConsent(guestId, 'marketing');
     return this.getProfile(guestId);
   }
 
-  async acceptConsent(guestId: string): Promise<GuestProfile> {
+  /** Повторное согласие на обработку ПДн после обновления документов. */
+  async acceptConsent(guestId: string, ctx: ConsentContext = {}): Promise<GuestProfile> {
     await this.db
       .update(guests)
-      .set({ consentVersion: this.config.privacyPolicyVersion, consentAt: new Date() })
+      .set({ consentVersion: LEGAL_VERSION, consentAt: new Date() })
       .where(eq(guests.id, guestId));
+    await this.recordConsent(guestId, 'pd', ctx);
     return this.getProfile(guestId);
   }
 
@@ -72,6 +114,11 @@ export class GuestsService {
    * Данные в iiko не удаляются автоматически — это отдельная процедура на стороне кофейни.
    */
   async deleteAccount(guestId: string): Promise<void> {
+    // Фото из обращений гостя удаляем из хранилища — на них могут быть персональные данные
+    const photos = await this.db
+      .select({ url: feedback.photoUrl })
+      .from(feedback)
+      .where(eq(feedback.guestId, guestId));
     await this.db.transaction(async (tx) => {
       await tx
         .update(guests)
@@ -81,9 +128,17 @@ export class GuestsService {
           birthday: null,
           iikoCustomerId: null,
           iikoCardTrack: null,
+          pushNewsEnabled: false,
           deletedAt: new Date(),
         })
         .where(eq(guests.id, guestId));
+      // Обращения остаются обезличенными: без телефона и фото
+      await tx.update(feedback).set({ contactPhone: null, photoUrl: null }).where(eq(feedback.guestId, guestId));
+      // Согласия отозваны (строки журнала остаются как подтверждение, пока жива запись)
+      await tx
+        .update(consents)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(consents.guestId, guestId), isNull(consents.revokedAt)));
       await tx.delete(deviceTokens).where(eq(deviceTokens.guestId, guestId));
       await tx
         .update(refreshTokens)
@@ -96,6 +151,7 @@ export class GuestsService {
           ),
         );
     });
+    for (const p of photos) await this.storage.deleteByUrl(p.url);
   }
 
   async registerDevice(token: string, platform: 'android' | 'ios' | 'web', guestId: string | null): Promise<void> {
@@ -114,6 +170,16 @@ export class GuestsService {
       .select({ token: deviceTokens.token })
       .from(deviceTokens)
       .where(eq(deviceTokens.guestId, guestId));
+    return rows.map((r) => r.token);
+  }
+
+  /** Устройства гостей с действующим согласием на рекламу — адресаты новостей и акций. */
+  async marketingDeviceTokens(): Promise<string[]> {
+    const rows = await this.db
+      .select({ token: deviceTokens.token })
+      .from(deviceTokens)
+      .innerJoin(guests, eq(guests.id, deviceTokens.guestId))
+      .where(and(eq(guests.pushNewsEnabled, true), isNull(guests.deletedAt)));
     return rows.map((r) => r.token);
   }
 }

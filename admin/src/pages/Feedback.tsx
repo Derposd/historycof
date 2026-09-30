@@ -239,7 +239,7 @@ function FeedbackDetail({ id, onClose }: { id: string; onClose: () => void }) {
                 }}
                 rows={4}
                 maxLength={3000}
-                placeholder="Ответ увидит гость в приложении и получит push-уведомление"
+                placeholder="Ответ увидит гость в приложении и получит уведомление"
               />
             </label>
             <div className="templates">

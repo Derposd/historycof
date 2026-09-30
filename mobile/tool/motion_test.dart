@@ -45,7 +45,7 @@ void main() {
       await tester.runAsync(() async {
         await container.read(authControllerProvider.future);
         await auth.requestOtp('+79990000001');
-        await auth.verifyOtp(phone: '+79990000001', code: '1234', acceptPrivacyPolicy: true);
+        await auth.verifyOtp(phone: '+79990000001', code: '1234', acceptPersonalData: true);
       });
       await tester.pump();
     }

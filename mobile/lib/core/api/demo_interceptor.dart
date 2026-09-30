@@ -40,7 +40,8 @@ class DemoInterceptor extends Interceptor {
             'id': 'demo-guest',
             'phone': data['phone'],
             'name': data['name'],
-            'pushNewsEnabled': true,
+            // Реклама — только с отдельного согласия (галочка при входе)
+            'pushNewsEnabled': data['acceptMarketing'] == true,
             'consentRequired': false,
           };
           body = {'accessToken': 'demo', 'refreshToken': 'demo', 'expiresIn': 900, 'guest': _guest, 'isNewUser': true};
@@ -69,8 +70,14 @@ class DemoInterceptor extends Interceptor {
           body = _menu;
         case ('GET', '/venue'):
           body = _venue;
-        case ('GET', '/legal/privacy'):
-          body = {'version': 'demo', 'markdown': _privacy};
+        case ('GET', final p) when p.startsWith('/legal/'):
+          final kind = p.substring(7);
+          body = {
+            'kind': kind,
+            'version': 'demo',
+            'title': _legalTitles[kind] ?? 'Документ',
+            'markdown': _demoLegal(kind),
+          };
         case ('GET', '/loyalty'):
           body = {
             'card': {'cardNumber': '7707 0000 0000', 'barcode': '770700000000'},
@@ -173,6 +180,8 @@ final _menu = <String, dynamic>{
               'prices': <Map<String, dynamic>>[],
               'badges': ['team_choice', 'story'],
               'story': 'Здесь будет короткая легенда блюда — для позиций с пометкой «Блюдо с историей».',
+              'nutrition': {'kcal': 412, 'proteins': 18.5, 'fats': 16, 'carbs': 44},
+              'allergens': 'молоко, яйца, глютен',
             },
           ],
         },
@@ -215,16 +224,27 @@ final _venue = <String, dynamic>{
   'lng': null,
   'phone': '+79604316223',
   'whatsapp': '+79604316223',
-  'instagram': 'history.coffee.ru',
+  'telegram': '',
+  'vk': '',
   'website': 'https://historycoffee.ru/',
   'legalName': 'ИП Жабоева А. Т.',
+  'inn': '',
+  'ogrn': '',
+  'legalAddress': '',
   'hours': [
     for (var d = 1; d <= 7; d++) {'day': d, 'open': d <= 5 ? '08:00' : '09:00', 'close': '23:00'},
   ],
 };
 
-const _privacy = '''# Политика обработки персональных данных
+const _legalTitles = {
+  'privacy': 'Политика обработки персональных данных',
+  'consent': 'Согласие на обработку персональных данных',
+  'marketing': 'Согласие на получение рекламы',
+  'loyalty': 'Правила бонусной программы',
+};
+
+String _demoLegal(String kind) => '''# ${_legalTitles[kind] ?? 'Документ'}
 
 Это демо-версия приложения: данные никуда не отправляются и хранятся только до закрытия приложения.
 
-В рабочей версии полный текст политики загружается с сервера кофейни и доступен в этом разделе.''';
+В рабочей версии полный текст документа загружается с сервера кофейни — с реквизитами кофейни из админки.''';

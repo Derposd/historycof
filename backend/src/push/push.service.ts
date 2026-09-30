@@ -60,17 +60,22 @@ export class PushService {
       this.logger.log(`[dev] push → ${tokens.length} устройств: ${msg.title}`);
       return;
     }
-    const res = await this.messaging.sendEachForMulticast({
-      tokens,
-      notification: { title: msg.title, body: msg.body, imageUrl: msg.imageUrl },
-      data: msg.data,
-      apns: { payload: { aps: { sound: 'default' } } },
-    });
-    const stale = res.responses
-      .map((r, i) => (!r.success && isStaleTokenError(r.error?.code) ? tokens[i] : null))
-      .filter((t): t is string => t !== null);
-    if (stale.length) {
-      await this.db.delete(deviceTokens).where(inArray(deviceTokens.token, stale));
+    // FCM принимает не больше 500 адресатов за вызов
+    for (let i = 0; i < tokens.length; i += 500) {
+      const chunk = tokens.slice(i, i + 500);
+      const res = await this.messaging.sendEachForMulticast({
+        tokens: chunk,
+        notification: { title: msg.title, body: msg.body, imageUrl: msg.imageUrl },
+        data: msg.data,
+        android: { priority: 'high', notification: { channelId: msg.data?.type === 'news' ? 'news' : 'service' } },
+        apns: { payload: { aps: { sound: 'default' } } },
+      });
+      const stale = res.responses
+        .map((r, j) => (!r.success && isStaleTokenError(r.error?.code) ? chunk[j] : null))
+        .filter((t): t is string => t !== null);
+      if (stale.length) {
+        await this.db.delete(deviceTokens).where(inArray(deviceTokens.token, stale));
+      }
     }
   }
 }

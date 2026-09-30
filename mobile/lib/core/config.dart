@@ -18,5 +18,4 @@ abstract final class AppConfig {
       firebaseApiKey.isNotEmpty && firebaseProjectId.isNotEmpty && firebaseSenderId.isNotEmpty;
 
   /// Топик FCM для новостей — совпадает с FCM_NEWS_TOPIC на backend.
-  static const newsTopic = 'news';
 }

@@ -27,9 +27,10 @@ Future<void> main() async {
   final container = ProviderContainer();
   runApp(UncontrolledProviderScope(container: container, child: const HistoryCoffeeApp()));
 
-  // Push инициализируем после первого кадра, не задерживая запуск.
-  final profile = await container.read(authControllerProvider.future).catchError((_) => null);
-  await container.read(pushServiceProvider).init(newsEnabled: profile?.pushNewsEnabled ?? true);
+  // Push инициализируем после первого кадра, не задерживая запуск (профиль нужен, чтобы
+  // привязать устройство к вошедшему гостю).
+  await container.read(authControllerProvider.future).catchError((_) => null);
+  await container.read(pushServiceProvider).init();
 }
 
 /// Шрифты распространяются по SIL Open Font License 1.1: коммерческое использование

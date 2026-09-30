@@ -35,7 +35,7 @@ export function Logo({ size = 40, animate = false }: { size?: number; animate?: 
       <Monogram size={size} animate={animate} />
       <div className="logo-words">
         <div className="logo-title" style={{ fontSize: size * 0.62 }}>History</div>
-        <div className="logo-sub">coffee boutique</div>
+        <div className="logo-sub">кофейня-бутик</div>
       </div>
     </div>
   )

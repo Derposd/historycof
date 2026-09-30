@@ -51,7 +51,7 @@ export function Dashboard() {
         <Stat label="Гостей в приложении" value={s.guests.total} hint={`+${s.guests.new30d} за 30 дней`} />
         <Stat label="Активны за неделю" value={s.guests.active7d} />
         <Stat label="С бонусной картой" value={s.guests.loyaltyLinked} hint="связаны с iiko" />
-        <Stat label="Устройств для push" value={s.devices} />
+        <Stat label="Согласны на рассылку" value={s.marketingSubscribers ?? 0} hint="получат новости уведомлением" />
       </div>
 
       <div className="grid grid-2">

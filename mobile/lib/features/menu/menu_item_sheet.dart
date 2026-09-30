@@ -90,6 +90,18 @@ class MenuItemSheet extends StatelessWidget {
                       const SizedBox(height: HcSpace.xs),
                       Text(item.description!, style: HcType.sans(size: 15.5, height: 1.55)),
                     ],
+                    if (item.nutrition != null) ...[
+                      const SizedBox(height: HcSpace.l),
+                      const SectionLabel('Пищевая ценность на порцию'),
+                      const SizedBox(height: HcSpace.s),
+                      _Nutrition(item.nutrition!),
+                    ],
+                    if (item.allergens != null && item.allergens!.isNotEmpty) ...[
+                      const SizedBox(height: HcSpace.l),
+                      const SectionLabel('Аллергены'),
+                      const SizedBox(height: HcSpace.xs),
+                      Text(item.allergens!, style: HcType.sans(size: 15.5, height: 1.5)),
+                    ],
                     if (item.prices.isNotEmpty) ...[
                       const SizedBox(height: HcSpace.xl),
                       const Hairline(),
@@ -145,6 +157,40 @@ class _Prices extends StatelessWidget {
             ],
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Калорийность и БЖУ в четыре ровные колонки.
+class _Nutrition extends StatelessWidget {
+  const _Nutrition(this.n);
+
+  final MenuNutrition n;
+
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1).replaceAll('.', ',');
+
+  @override
+  Widget build(BuildContext context) {
+    final cells = [
+      if (n.kcal != null) ('ккал', n.kcal!),
+      if (n.proteins != null) ('белки, г', n.proteins!),
+      if (n.fats != null) ('жиры, г', n.fats!),
+      if (n.carbs != null) ('углеводы, г', n.carbs!),
+    ];
+    return Row(
+      children: [
+        for (final (label, v) in cells)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_fmt(v), style: HcType.serif(size: 24, weight: 600, tabular: true)),
+                Text(label, style: HcType.sans(size: 12.5, color: HcColors.textSecondary)),
+              ],
+            ),
+          ),
       ],
     );
   }

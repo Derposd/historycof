@@ -7,24 +7,39 @@ import '../../core/theme/typography.dart';
 import '../../core/widgets/background.dart';
 import '../../core/widgets/common.dart';
 
-final privacyPolicyProvider = FutureProvider<String>((ref) async {
-  final json = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/legal/privacy', auth: false);
-  return json['markdown'] as String;
+/// Документы для гостей: privacy — политика, consent — согласие на обработку ПДн,
+/// marketing — согласие на рекламу, loyalty — правила бонусной программы.
+typedef LegalDoc = ({String title, String markdown});
+
+final legalDocProvider = FutureProvider.family<LegalDoc, String>((ref, kind) async {
+  final json = await ref.watch(apiClientProvider).get<Map<String, dynamic>>('/legal/$kind', auth: false);
+  return (title: json['title'] as String? ?? 'Документ', markdown: json['markdown'] as String);
 });
 
-/// Политика обработки ПДн. Текст приходит с сервера — его можно обновлять без релиза.
-class PrivacyScreen extends ConsumerWidget {
-  const PrivacyScreen({super.key});
+/// Короткие заголовки для верхней панели.
+const legalShortTitles = {
+  'privacy': 'Политика',
+  'consent': 'Согласие на обработку данных',
+  'marketing': 'Согласие на рекламу',
+  'loyalty': 'Правила бонусной программы',
+};
+
+/// Экран юридического документа. Текст приходит с сервера — его можно обновлять без релиза;
+/// реквизиты кофейни подставляются из админки.
+class LegalScreen extends ConsumerWidget {
+  const LegalScreen({super.key, required this.kind});
+
+  final String kind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final policy = ref.watch(privacyPolicyProvider);
+    final doc = ref.watch(legalDocProvider(kind));
     return Scaffold(
-      appBar: AppBar(title: const Text('Конфиденциальность')),
+      appBar: AppBar(title: Text(legalShortTitles[kind] ?? 'Документ')),
       body: HcBackground(
-        child: switch (policy) {
-          AsyncData(:final value) => SimpleMarkdown(value),
-          AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(privacyPolicyProvider)),
+        child: switch (doc) {
+          AsyncData(:final value) => SimpleMarkdown(value.markdown),
+          AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(legalDocProvider(kind))),
           _ => const Center(child: CircularProgressIndicator(strokeWidth: 1.6)),
         },
       ),
@@ -67,7 +82,9 @@ class SimpleMarkdown extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('—  ', style: HcType.sans(color: HcColors.accent)),
-                  Expanded(child: Text(line.replaceFirst(RegExp(r'^-\s*'), ''), style: HcType.sans(size: 15))),
+                  Expanded(
+                    child: Text.rich(_inline(line.replaceFirst(RegExp(r'^-\s*'), '')), style: HcType.sans(size: 15)),
+                  ),
                 ],
               ),
             ),
@@ -77,7 +94,7 @@ class SimpleMarkdown extends StatelessWidget {
         blocks.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text(block.replaceAll('\n', ' '), style: HcType.sans(size: 15, height: 1.55)),
+            child: Text.rich(_inline(block.replaceAll('\n', ' ')), style: HcType.sans(size: 15, height: 1.55)),
           ),
         );
       }
@@ -89,4 +106,18 @@ class SimpleMarkdown extends StatelessWidget {
       ),
     );
   }
+}
+
+/// **Жирный** текст внутри абзаца.
+TextSpan _inline(String text) {
+  final parts = text.split('**');
+  return TextSpan(
+    children: [
+      for (var i = 0; i < parts.length; i++)
+        TextSpan(
+          text: parts[i],
+          style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w600) : null,
+        ),
+    ],
+  );
 }

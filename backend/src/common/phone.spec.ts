@@ -1,4 +1,4 @@
-import { formatRuPhone, normalizeRuPhone } from './phone';
+import { formatRuPhone, normalizeRuMobile, normalizeRuPhone } from './phone';
 
 describe('normalizeRuPhone', () => {
   it.each([
@@ -16,5 +16,18 @@ describe('normalizeRuPhone', () => {
 
   it('форматирует для показа', () => {
     expect(formatRuPhone('+79604316223')).toBe('+7 (960) 431-62-23');
+  });
+});
+
+describe('normalizeRuMobile — вход только по российскому мобильному', () => {
+  it.each([
+    ['+7 (960) 431-62-23', '+79604316223'],
+    ['89001112233', '+79001112233'],
+  ])('%s → %s', (input, expected) => {
+    expect(normalizeRuMobile(input)).toBe(expected);
+  });
+
+  it.each(['+7 701 123-45-67', '+7 495 123-45-67', '+375291234567'])('%s — не российский мобильный', (input) => {
+    expect(normalizeRuMobile(input)).toBeNull();
   });
 });

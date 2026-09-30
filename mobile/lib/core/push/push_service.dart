@@ -5,14 +5,17 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/auth_controller.dart';
 import '../config.dart';
 import '../providers.dart';
 
 /// Push-уведомления через Firebase Cloud Messaging.
 ///
-/// Новости приходят по топику `news` (подписка на устройстве), персональные
-/// уведомления (ответ на обращение) — по токену устройства, который мы
-/// регистрируем на backend. Если Firebase не сконфигурирован через
+/// Все уведомления адресные: токен устройства регистрируется на сервере только
+/// после входа. Служебные (ответ на обращение) приходят владельцу аккаунта,
+/// новости и акции — только гостям с отдельным согласием на рекламу
+/// (38-ФЗ, ст. 18): кому отправлять, решает сервер по журналу согласий.
+/// Общих подписок («топиков») нет. Если Firebase не сконфигурирован через
 /// --dart-define, сервис тихо отключается.
 class PushService {
   PushService(this._ref);
@@ -45,7 +48,7 @@ class PushService {
     );
   }
 
-  Future<void> init({required bool newsEnabled}) async {
+  Future<void> init() async {
     final options = _options();
     if (options == null || kIsWeb) {
       debugPrint('Push: Firebase не настроен — уведомления отключены');
@@ -59,7 +62,8 @@ class PushService {
       _enabled = true;
 
       await messaging.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
-      if (newsEnabled) await messaging.subscribeToTopic(AppConfig.newsTopic);
+      // Прежние версии подписывали на общий топик новостей без согласия — снимаем эту подписку
+      unawaited(messaging.unsubscribeFromTopic('news').catchError((_) {}));
 
       _token = await messaging.getToken();
       messaging.onTokenRefresh.listen((t) {
@@ -81,10 +85,10 @@ class PushService {
     }
   }
 
-  /// Привязывает токен устройства к гостю (если вошёл) — для персональных уведомлений.
+  /// Привязывает токен устройства к вошедшему гостю. Без входа токен не отправляется.
   Future<void> registerDevice() async {
     final token = _token;
-    if (!_enabled || token == null) return;
+    if (!_enabled || token == null || !_ref.read(isSignedInProvider)) return;
     try {
       await _ref
           .read(apiClientProvider)
@@ -104,12 +108,6 @@ class PushService {
     try {
       await _ref.read(apiClientProvider).delete<void>('/devices/${Uri.encodeComponent(token)}');
     } catch (_) {}
-  }
-
-  Future<void> setNewsSubscription(bool on) async {
-    if (!_enabled) return;
-    final m = FirebaseMessaging.instance;
-    on ? await m.subscribeToTopic(AppConfig.newsTopic) : await m.unsubscribeFromTopic(AppConfig.newsTopic);
   }
 }
 

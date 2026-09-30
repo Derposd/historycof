@@ -21,9 +21,13 @@ class Venue {
     required this.address,
     required this.phone,
     required this.whatsapp,
-    required this.instagram,
     required this.legalName,
     required this.hours,
+    this.telegram = '',
+    this.vk = '',
+    this.inn = '',
+    this.ogrn = '',
+    this.legalAddress = '',
     this.website,
     this.lat,
     this.lng,
@@ -36,10 +40,18 @@ class Venue {
   final double? lng;
   final String phone;
   final String whatsapp;
-  final String instagram;
+
+  /// Telegram и ВКонтакте — необязательные (Instagram не используем: Meta признана в РФ экстремистской).
+  final String telegram;
+  final String vk;
   final String? website;
-  final String legalName;
   final List<DayHours> hours;
+
+  /// Сведения о продавце (ЗоЗПП, ст. 9).
+  final String legalName;
+  final String inn;
+  final String ogrn;
+  final String legalAddress;
 
   factory Venue.fromJson(Map<String, dynamic> j) => Venue(
     name: j['name'] as String,
@@ -49,9 +61,13 @@ class Venue {
     lng: (j['lng'] as num?)?.toDouble(),
     phone: j['phone'] as String,
     whatsapp: j['whatsapp'] as String,
-    instagram: j['instagram'] as String,
+    telegram: j['telegram'] as String? ?? '',
+    vk: j['vk'] as String? ?? '',
     website: j['website'] as String?,
     legalName: j['legalName'] as String? ?? '',
+    inn: j['inn'] as String? ?? '',
+    ogrn: j['ogrn'] as String? ?? '',
+    legalAddress: j['legalAddress'] as String? ?? '',
     hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
   );
 
@@ -62,7 +78,6 @@ class Venue {
     address: 'г. Нальчик, ул. Толстого, 43',
     phone: '+79604316223',
     whatsapp: '+79604316223',
-    instagram: 'history.coffee.ru',
     website: 'https://historycoffee.ru/',
     legalName: 'ИП Жабоева А. Т.',
     hours: [

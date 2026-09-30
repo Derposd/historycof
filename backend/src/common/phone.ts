@@ -6,10 +6,20 @@
 export function normalizeRuPhone(input: string | null | undefined): string | null {
   if (!input) return null;
   let digits = input.replace(/\D/g, '');
-  if (digits.length === 10 && digits.startsWith('9')) digits = `7${digits}`;
+  if (digits.length === 10 && /^[3489]/.test(digits)) digits = `7${digits}`;
   if (digits.length === 11 && digits.startsWith('8')) digits = `7${digits.slice(1)}`;
   if (digits.length !== 11 || !digits.startsWith('7')) return null;
   return `+${digits}`;
+}
+
+/**
+ * Номер для входа: только российский мобильный (+79…). Требование 149-ФЗ (ст. 10.6,
+ * в ред. 406-ФЗ): пользователей из РФ авторизуют по российскому номеру телефона.
+ * Номера Казахстана тоже начинаются с +7, но дальше идёт 6 или 7 — их не пускаем.
+ */
+export function normalizeRuMobile(input: string | null | undefined): string | null {
+  const phone = normalizeRuPhone(input);
+  return phone && phone.startsWith('+79') ? phone : null;
 }
 
 /** +79604316223 → +7 (960) 431-62-23 */

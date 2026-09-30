@@ -3,6 +3,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { APP_CONFIG, AppConfig } from '../config/configuration';
 import { DB, Db } from '../db/database.module';
 import { NewsPost, newsPosts } from '../db/schema';
+import { GuestsService } from '../guests/guests.service';
 import { PushService } from '../push/push.service';
 
 export interface NewsInput {
@@ -38,6 +39,7 @@ export class NewsService {
     @Inject(DB) private readonly db: Db,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly push: PushService,
+    private readonly guests: GuestsService,
   ) {}
 
   /**
@@ -145,7 +147,8 @@ export class NewsService {
 
     if (notify && !p.pushedAt) {
       try {
-        await this.push.sendToTopic(this.config.push.newsTopic, {
+        // Новости и акции — реклама: только гостям с согласием на её получение (38-ФЗ ст. 18)
+        await this.push.sendToTokens(await this.guests.marketingDeviceTokens(), {
           title: p.title,
           body: excerpt(p.body, 140),
           imageUrl: p.imageUrl ?? undefined,
