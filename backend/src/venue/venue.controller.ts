@@ -42,6 +42,7 @@ class UpdateVenueDto {
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lat !== null) @IsLatitude() lat?: number | null;
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => o.lng !== null) @IsLongitude() lng?: number | null;
   @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'Телефон в формате +7XXXXXXXXXX' }) phone?: string;
+  @IsOptional() @Matches(/^(\+7\d{10})?$/, { message: 'WhatsApp в формате +7XXXXXXXXXX или пусто' }) whatsapp?: string;
   @IsOptional() @IsString() @MaxLength(200) website?: string;
   @IsOptional() @IsString() @Length(1, 200, { message: 'Укажите наименование продавца (ИП или организация)' }) legalName?: string;
   @IsOptional() @Matches(/^(\d{10}|\d{12})?$/, { message: 'ИНН — 10 или 12 цифр' }) inn?: string;

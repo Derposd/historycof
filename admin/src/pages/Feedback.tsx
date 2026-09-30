@@ -208,7 +208,12 @@ function FeedbackDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <div className="caps">Гость</div>
             <div>{f.guestName ?? (f.guestId ? 'Гость приложения' : 'Анонимно')}</div>
             {phone ? (
-              <a href={`tel:${phone}`}>{formatPhone(phone)}</a>
+              <div className="row">
+                <a href={`tel:${phone}`}>{formatPhone(phone)}</a>
+                <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">
+                  WhatsApp
+                </a>
+              </div>
             ) : (
               <div className="muted small">Телефон не указан</div>
             )}

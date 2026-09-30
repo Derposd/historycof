@@ -114,6 +114,14 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <span className="caps">Телефон</span>
             <input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+79604316223" required />
           </label>
+          <label className="field">
+            <span className="caps">WhatsApp (необязательно)</span>
+            <input value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value.trim())} placeholder="+79604316223" />
+            <span className="muted small">
+              Пусто — кнопки WhatsApp в приложении не будет. В России WhatsApp заблокирован с февраля 2026 года и у многих
+              гостей откроется только через VPN.
+            </span>
+          </label>
         </div>
 
         <div className="card stack">

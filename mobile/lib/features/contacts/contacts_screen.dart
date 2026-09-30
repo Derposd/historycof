@@ -63,8 +63,8 @@ class ContactsScreen extends ConsumerWidget {
             padding: h,
             child: FadeSlideIn(
               index: 1,
-              // Связь: звонок и чат с кофейней (сообщения приходят в админку). Сторонних мессенджеров
-              // и соцсетей нет: Instagram — Meta признана в РФ экстремистской, WhatsApp заблокирован.
+              // Связь: звонок, чат с кофейней (сообщения приходят в админку) и, если указан в админке,
+              // WhatsApp. Instagram не показываем: Meta признана в РФ экстремистской.
               child: Row(
                 children: [
                   Expanded(
@@ -83,6 +83,16 @@ class ContactsScreen extends ConsumerWidget {
                       onTap: () => context.push('/chat'),
                     ),
                   ),
+                  if (venue.whatsapp.isNotEmpty) ...[
+                    const SizedBox(width: HcSpace.listGap),
+                    Expanded(
+                      child: _ActionTile(
+                        icon: Icons.forum_outlined,
+                        label: 'WhatsApp',
+                        onTap: () => openExternal(Links.whatsapp(venue.whatsapp)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

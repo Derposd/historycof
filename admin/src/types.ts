@@ -122,6 +122,7 @@ export interface Venue {
   lat: number | null
   lng: number | null
   phone: string
+  whatsapp: string
   website: string
   hours: DayHours[]
   legalName: string

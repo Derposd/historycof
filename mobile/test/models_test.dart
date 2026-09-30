@@ -82,8 +82,9 @@ void main() {
   });
 
   group('Links', () {
-    test('звонок', () {
+    test('звонок и WhatsApp', () {
       expect(Links.call('+79604316223').toString(), 'tel:+79604316223');
+      expect(Links.whatsapp('+79604316223').toString(), 'https://wa.me/79604316223');
     });
 
     test('маршрут по адресу, пока нет координат', () {

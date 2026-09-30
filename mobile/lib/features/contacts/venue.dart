@@ -20,6 +20,7 @@ class Venue {
     required this.tagline,
     required this.address,
     required this.phone,
+    this.whatsapp = '',
     required this.legalName,
     this.inn = '',
     this.ogrn = '',
@@ -35,6 +36,9 @@ class Venue {
   final double? lat;
   final double? lng;
   final String phone;
+
+  /// Необязательный: пусто — кнопки WhatsApp нет.
+  final String whatsapp;
 
   final String? website;
   final List<DayHours> hours;
@@ -53,6 +57,7 @@ class Venue {
     lat: (j['lat'] as num?)?.toDouble(),
     lng: (j['lng'] as num?)?.toDouble(),
     phone: j['phone'] as String,
+    whatsapp: j['whatsapp'] as String? ?? '',
     website: j['website'] as String?,
     legalName: j['legalName'] as String? ?? '',
     inn: j['inn'] as String? ?? '',
@@ -66,6 +71,7 @@ class Venue {
     tagline: 'Место для ваших историй',
     address: 'г. Нальчик, ул. Толстого, 43',
     phone: '+79604316223',
+    whatsapp: '+79604316223',
     website: 'https://historycoffee.ru/',
     legalName: 'ИП Жабоева А. Т.',
     hours: [

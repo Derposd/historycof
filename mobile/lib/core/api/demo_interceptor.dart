@@ -258,6 +258,7 @@ final _venue = <String, dynamic>{
   'lat': null,
   'lng': null,
   'phone': '+79604316223',
+  'whatsapp': '+79604316223',
   'website': 'https://historycoffee.ru/',
   'legalName': 'ИП Жабоева А. Т.',
   'inn': '',

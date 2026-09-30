@@ -13,6 +13,8 @@ export interface VenueInfo {
   lat: number | null;
   lng: number | null;
   phone: string;
+  /** WhatsApp (необязательно; пусто — кнопки в приложении нет). В РФ заблокирован с 02.2026 — работает через VPN. */
+  whatsapp: string;
   website: string;
   hours: DayHours[];
   // ── Сведения о продавце (ЗоЗПП ст. 9) и об операторе ПДн (152-ФЗ) ──
@@ -29,7 +31,7 @@ export interface VenueInfo {
 }
 
 /** Поля, которые раньше были в настройках и больше не используются. */
-const REMOVED_FIELDS = ['instagram', 'whatsapp', 'telegram', 'vk', 'processors', 'loyaltyRules'];
+const REMOVED_FIELDS = ['instagram', 'telegram', 'vk', 'processors', 'loyaltyRules'];
 
 /** Данные из брифа заказчика (сверено с historycoffee.ru). */
 export const DEFAULT_VENUE: VenueInfo = {
@@ -39,6 +41,7 @@ export const DEFAULT_VENUE: VenueInfo = {
   lat: null,
   lng: null,
   phone: '+79604316223',
+  whatsapp: '+79604316223',
   website: 'https://historycoffee.ru/',
   legalName: 'ИП Жабоева А. Т.',
   inn: '',
@@ -68,8 +71,8 @@ export class VenueService {
   async get(): Promise<VenueInfo> {
     const [row] = await this.db.select().from(settings).where(eq(settings.key, KEY));
     const stored = { ...((row?.value as Record<string, unknown>) ?? {}) };
-    // Мессенджеры и соцсети убраны: Instagram — Meta признана в РФ экстремистской (наказывают даже
-    // за ссылки), WhatsApp заблокирован с февраля 2026, Telegram ограничен. Связь — только телефон.
+    // Instagram убран: Meta признана в РФ экстремистской (наказывают даже за ссылки). Telegram и VK —
+    // по решению заказчика. WhatsApp (не запрещён, но заблокирован) — необязательное поле.
     for (const k of REMOVED_FIELDS) delete stored[k];
     const venue = { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
     // Адрес продавца по умолчанию — адрес кофейни (показываем в админке настоящее значение)

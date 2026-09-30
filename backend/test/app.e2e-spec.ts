@@ -515,19 +515,27 @@ describe('History Coffee API (e2e)', () => {
       await http.get('/api/v1/legal/unknown').expect(404);
     });
 
-    it('Instagram и мессенджеры не отдаём, даже если остались в старых настройках', async () => {
+    it('Instagram, Telegram и VK не отдаём, даже если остались в старых настройках; WhatsApp — по желанию', async () => {
       await q(
         `insert into settings (key, value) values ('venue', '{"instagram":"old.account","whatsapp":"+79604316223","telegram":"hc","vk":"hc","phone":"+79604316223"}')
          on conflict (key) do update set value = excluded.value`,
       );
       const res = await http.get('/api/v1/venue').expect(200);
-      for (const k of ['instagram', 'whatsapp', 'telegram', 'vk']) expect(res.body[k]).toBeUndefined();
+      for (const k of ['instagram', 'telegram', 'vk']) expect(res.body[k]).toBeUndefined();
+      expect(res.body.whatsapp).toBe('+79604316223');
       expect(res.body.phone).toBe('+79604316223');
       expect(res.body.legalAddress).toBe(res.body.address); // адрес продавца по умолчанию — адрес кофейни
       await http
         .put('/api/v1/admin/venue')
         .set('Authorization', `Bearer ${staffToken}`)
-        .send({ whatsapp: '+79604316223' })
+        .send({ whatsapp: '8960' })
+        .expect(400);
+      await http.put('/api/v1/admin/venue').set('Authorization', `Bearer ${staffToken}`).send({ whatsapp: '' }).expect(200);
+      expect((await http.get('/api/v1/venue').expect(200)).body.whatsapp).toBe('');
+      await http
+        .put('/api/v1/admin/venue')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ instagram: 'x' })
         .expect(400);
     });
 
