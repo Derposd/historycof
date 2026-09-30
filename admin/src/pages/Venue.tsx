@@ -180,8 +180,8 @@ function VenueForm({ initial }: { initial: VenueT }) {
       <div className="card stack" style={{ marginTop: 16 }}>
         <h3>Продавец и документы</h3>
         <span className="muted small">
-          Эти сведения показываются в приложении (закон о защите прав потребителей) и подставляются в политику
-          обработки персональных данных, согласие и правила бонусной программы.
+          Подставляются в согласие на обработку персональных данных, политику и правила бонусной программы.
+          По закону обязательны только наименование и адрес.
         </span>
         <div className="grid grid-2" style={{ gap: 12 }}>
           <label className="field">
@@ -189,21 +189,13 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} required />
           </label>
           <label className="field">
-            <span className="caps">Почта для запросов по персональным данным</span>
-            <input type="email" value={form.privacyEmail} onChange={(e) => set('privacyEmail', e.target.value)} placeholder="pd@historycoffee.ru" />
-          </label>
-          <label className="field">
-            <span className="caps">ИНН</span>
-            <input value={form.inn} onChange={(e) => set('inn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={12} placeholder="10 или 12 цифр" />
-          </label>
-          <label className="field">
-            <span className="caps">ОГРН / ОГРНИП</span>
-            <input value={form.ogrn} onChange={(e) => set('ogrn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={15} placeholder="13 или 15 цифр" />
+            <span className="caps">Адрес</span>
+            <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} placeholder={`Пусто — ${form.address}`} />
           </label>
         </div>
         <label className="field">
-          <span className="caps">Адрес регистрации</span>
-          <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} placeholder="Как в выписке ЕГРИП / ЕГРЮЛ" />
+          <span className="caps">Почта для запросов гостей о данных (необязательно)</span>
+          <input type="email" value={form.privacyEmail} onChange={(e) => set('privacyEmail', e.target.value)} placeholder="pd@historycoffee.ru" />
         </label>
         <label className="field">
           <span className="caps">Кому передаются данные гостей (для согласия и политики)</span>

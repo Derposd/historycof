@@ -21,11 +21,11 @@ export interface VenueInfo {
   website: string;
   hours: DayHours[];
   // ── Сведения о продавце (ЗоЗПП ст. 9) и об операторе ПДн (152-ФЗ) ──
+  /** Наименование оператора (ИП или организация) — обязательно для согласия (ч. 4 ст. 9 152-ФЗ). */
   legalName: string;
-  inn: string;
-  ogrn: string;
+  /** Адрес оператора; пусто — используется адрес кофейни. */
   legalAddress: string;
-  /** Почта для запросов по персональным данным. */
+  /** Почта для запросов по персональным данным (необязательно). */
   privacyEmail: string;
   /** Кому оператор поручает обработку ПДн — для политики и согласия; пусто — типовой перечень. */
   processors: string;
@@ -34,7 +34,7 @@ export interface VenueInfo {
 }
 
 /** Поля, которые раньше были в настройках и больше не используются. */
-const REMOVED_FIELDS = ['instagram'];
+const REMOVED_FIELDS = ['instagram', 'inn', 'ogrn'];
 
 /** Данные из брифа заказчика (сверено с historycoffee.ru). */
 export const DEFAULT_VENUE: VenueInfo = {
@@ -49,8 +49,6 @@ export const DEFAULT_VENUE: VenueInfo = {
   vk: '',
   website: 'https://historycoffee.ru/',
   legalName: 'ИП Жабоева А. Т.',
-  inn: '',
-  ogrn: '',
   legalAddress: '',
   privacyEmail: '',
   processors: '',
@@ -78,7 +76,8 @@ export class VenueService {
   async get(): Promise<VenueInfo> {
     const [row] = await this.db.select().from(settings).where(eq(settings.key, KEY));
     const stored = { ...((row?.value as Record<string, unknown>) ?? {}) };
-    // Instagram убран: Meta признана в РФ экстремистской организацией — ссылки и символику не показываем
+    // Instagram убран: Meta признана в РФ экстремистской организацией — ссылки и символику не показываем.
+    // ИНН/ОГРН убраны: для меню и согласия не обязательны (нужны только наименование и адрес).
     for (const k of REMOVED_FIELDS) delete stored[k];
     return { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
   }

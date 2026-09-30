@@ -128,8 +128,6 @@ export interface Venue {
   website: string
   hours: DayHours[]
   legalName: string
-  inn: string
-  ogrn: string
   legalAddress: string
   privacyEmail: string
   processors: string

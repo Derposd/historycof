@@ -482,16 +482,24 @@ describe('History Coffee API (e2e)', () => {
       expect(res.body.telegram).toBe('historycoffee');
     });
 
-    it('реквизиты продавца попадают в документы', async () => {
+    it('в документах — наименование и адрес оператора, без заглушек', async () => {
+      const auth = { Authorization: `Bearer ${staffToken}` };
+      await http.put('/api/v1/admin/venue').set(auth).send({ legalAddress: '', privacyEmail: '' }).expect(200);
+      let res = await http.get('/api/v1/legal/consent').expect(200);
+      expect(res.body.markdown).toContain('ИП Жабоева А. Т., адрес: г. Нальчик, ул. Толстого, 43');
+      expect(res.body.markdown).not.toMatch(/\[[^\]]+\]/); // нет «[ИНН]» и подобных пустых мест
+      expect(res.body.markdown).not.toContain('ИНН');
+
       await http
         .put('/api/v1/admin/venue')
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ inn: '071234567890', ogrn: '312072100012345', legalAddress: 'г. Нальчик', privacyEmail: 'pd@historycoffee.ru' })
+        .set(auth)
+        .send({ legalAddress: 'г. Нальчик, ул. Примерная, 1', privacyEmail: 'pd@historycoffee.ru' })
         .expect(200);
-      const res = await http.get('/api/v1/legal/privacy').expect(200);
-      expect(res.body.markdown).toContain('071234567890');
+      res = await http.get('/api/v1/legal/privacy').expect(200);
+      expect(res.body.markdown).toContain('г. Нальчик, ул. Примерная, 1');
       expect(res.body.markdown).toContain('pd@historycoffee.ru');
-      await http.put('/api/v1/admin/venue').set('Authorization', `Bearer ${staffToken}`).send({ inn: '123' }).expect(400);
+      // ИНН/ОГРН больше не принимаются
+      await http.put('/api/v1/admin/venue').set(auth).send({ inn: '071234567890' }).expect(400);
     });
 
     it('удаление аккаунта убирает телефон из его обращений', async () => {

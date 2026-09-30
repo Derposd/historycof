@@ -25,9 +25,6 @@ class Venue {
     required this.hours,
     this.telegram = '',
     this.vk = '',
-    this.inn = '',
-    this.ogrn = '',
-    this.legalAddress = '',
     this.website,
     this.lat,
     this.lng,
@@ -49,9 +46,6 @@ class Venue {
 
   /// Сведения о продавце (ЗоЗПП, ст. 9).
   final String legalName;
-  final String inn;
-  final String ogrn;
-  final String legalAddress;
 
   factory Venue.fromJson(Map<String, dynamic> j) => Venue(
     name: j['name'] as String,
@@ -65,9 +59,6 @@ class Venue {
     vk: j['vk'] as String? ?? '',
     website: j['website'] as String?,
     legalName: j['legalName'] as String? ?? '',
-    inn: j['inn'] as String? ?? '',
-    ogrn: j['ogrn'] as String? ?? '',
-    legalAddress: j['legalAddress'] as String? ?? '',
     hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
   );
 
