@@ -129,7 +129,7 @@ Path parseSvgPath(String d) {
   return path;
 }
 
-/// Логотип: знак + «History» и подпись «кофейня-бутик» (надписи для покупателей — по-русски, 168-ФЗ).
+/// Логотип: знак + «History» и подпись «coffee boutique» (часть фирменного логотипа — по решению заказчика).
 /// С [animate] логотип собирается при первом показе (≈1,4 с).
 class HcLogo extends StatefulWidget {
   const HcLogo({super.key, this.size = 44, this.showSubtitle = true, this.color = HcColors.text, this.animate = false});
@@ -206,7 +206,7 @@ class _HcLogoState extends State<HcLogo> with SingleTickerProviderStateMixin {
                             child: Opacity(
                               opacity: sub,
                               child: Text(
-                                'кофейня-бутик',
+                                'coffee boutique',
                                 style: HcType.sans(
                                   size: size * 0.24,
                                   weight: 500,
