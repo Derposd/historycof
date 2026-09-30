@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Фон бренда: светлый тёплый айвори -->
+    <!-- Фон бренда: светлый тёплый айвори; фон иконки — зелёный из логотипа -->
     <color name="hc_background">#FBF7EF</color>
-    <color name="ic_launcher_background">#FBF7EF</color>
+    <color name="ic_launcher_background">#5E6D50</color>
 </resources>

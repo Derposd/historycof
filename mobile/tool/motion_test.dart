@@ -1,6 +1,7 @@
 // Раскадровка анимаций для просмотра «вживую» (не входит в обычный прогон тестов).
 // Запуск: flutter test tool/motion_test.dart --dart-define=DEMO=true --update-goldens
 // Кадры появятся в tool/screens/motion/, склейка в GIF — tool/make_gifs.py.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -111,7 +112,7 @@ void main() {
     frame = 0;
     final (c, router) = await start(tester);
     await tester.pump(const Duration(seconds: 1));
-    router.push('/news/demo-welcome');
+    unawaited(router.push('/news/demo-welcome'));
     await film(tester, 'news', 900, step: 60);
     // Прокрутка вверх: фото уходит медленнее текста
     final g = await tester.startGesture(const Offset(200, 700));
@@ -129,7 +130,7 @@ void main() {
     frame = 0;
     final (c, router) = await start(tester);
     await tester.pump(const Duration(seconds: 1));
-    router.push('/feedback/new?type=thanks');
+    unawaited(router.push('/feedback/new?type=thanks'));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }

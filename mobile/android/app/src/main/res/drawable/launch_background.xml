@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Сплэш до Android 12: айвори и перо из логотипа по центру -->
+<!-- Сплэш до Android 12: айвори и логотип по центру -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/hc_background" />
     <item>
-        <bitmap android:gravity="center" android:src="@mipmap/ic_launcher_foreground" />
+        <bitmap android:gravity="center" android:src="@drawable/splash_logo" />
     </item>
 </layer-list>

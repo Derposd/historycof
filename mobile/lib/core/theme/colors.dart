@@ -12,8 +12,12 @@ abstract final class HcColors {
   /// Основной акцент — приглушённый оливковый.
   static const accent = Color(0xFF8A9770);
 
-  /// Акцент hover/pressed.
-  static const accentDark = Color(0xFF5F6E45);
+  /// Акцент hover/pressed — зелёный из логотипа кофейни.
+  static const accentDark = brandGreen;
+
+  /// Цвета логотипа: зелёное кольцо и знак, светлый круг внутри.
+  static const brandGreen = Color(0xFF5E6D50);
+  static const brandLight = Color(0xFFEAE9E5);
 
   /// Текст основной — эспрессо.
   static const text = Color(0xFF362B22);

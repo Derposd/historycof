@@ -28,7 +28,11 @@ class NetImage extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (_, c) => Opacity(
                   opacity: 0.35,
-                  child: HcMonogram(size: (c.biggest.shortestSide * 0.32).clamp(20, 64), color: HcColors.textSecondary),
+                  child: HcMonogram(
+                    size: (c.biggest.shortestSide * 0.32).clamp(20, 64),
+                    color: HcColors.textSecondary,
+                    fill: const Color(0x00000000),
+                  ),
                 ),
               ),
             )
