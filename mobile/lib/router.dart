@@ -9,6 +9,7 @@ import 'features/contacts/contacts_screen.dart';
 import 'features/feedback/feedback.dart';
 import 'features/feedback/feedback_form_screen.dart';
 import 'features/feedback/my_feedback_screen.dart';
+import 'features/chat/chat_screen.dart';
 import 'features/loyalty/loyalty_screen.dart';
 import 'features/menu/menu_screen.dart';
 import 'features/news/news_detail_screen.dart';
@@ -73,6 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/feedback/mine',
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (_, state) => _page(state, const MyFeedbackScreen()),
+      ),
+      GoRoute(
+        path: '/chat',
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (_, state) => _page(state, const ChatScreen()),
       ),
       GoRoute(
         path: '/legal/:kind',

@@ -11,6 +11,7 @@ import { NewsModule } from './news/news.module';
 import { MenuModule } from './menu/menu.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { ChatModule } from './chat/chat.module';
 import { VenueModule } from './venue/venue.controller';
 import { StorageModule } from './storage/storage.module';
 import { PushModule } from './push/push.service';
@@ -49,6 +50,7 @@ export class AppModule {
         MenuModule,
         LoyaltyModule,
         FeedbackModule,
+        ChatModule,
         VenueModule,
         StaffModule,
         AnalyticsModule,

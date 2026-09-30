@@ -8,6 +8,7 @@ import 'core/auth/auth_controller.dart';
 import 'core/auth/guest_profile.dart';
 import 'core/push/push_service.dart';
 import 'core/theme/theme.dart';
+import 'features/chat/chat.dart';
 import 'features/feedback/feedback.dart';
 import 'features/news/news.dart';
 import 'router.dart';
@@ -36,6 +37,10 @@ class _HistoryCoffeeAppState extends ConsumerState<HistoryCoffeeApp> {
           if (title == null) return;
           if (m.data['type'] == 'news') ref.invalidate(newsFeedProvider);
           if (m.data['type'] == 'feedback') ref.invalidate(myFeedbackProvider);
+          if (m.data['type'] == 'chat') {
+            ref.invalidate(chatThreadProvider);
+            ref.invalidate(chatUnreadProvider);
+          }
           scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text(title),
@@ -53,6 +58,8 @@ class _HistoryCoffeeAppState extends ConsumerState<HistoryCoffeeApp> {
         router.push('/news/${data['id']}');
       case 'feedback':
         router.push('/feedback/mine');
+      case 'chat':
+        router.push('/chat');
     }
   }
 

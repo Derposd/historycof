@@ -29,3 +29,8 @@ done
 curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" -F type=suggestion -F "message=Проверка стенда: обращение от тестового клиента" "$BASE/api/v1/feedback" >/dev/null
 N=$(curl -fsS -m 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/api/v1/admin/feedback?page=0&pageSize=30" | j "sum(1 for f in d['items'] if f['message'].startswith('Проверка стенда'))")
 [ "$N" -ge 1 ] && ok "обращение клиента видно в админке"
+
+# Чат: клиент пишет — сообщение видно в админке (открытие диалога отмечает его прочитанным)
+curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"text":"Проверка стенда: сообщение в чат"}' "$BASE/api/v1/chat" >/dev/null
+GID=$(curl -fsS -m 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/api/v1/admin/chats" | j "next(t['guestId'] for t in d if t['lastText'].startswith('Проверка стенда'))")
+curl -fsS -m 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/api/v1/admin/chats/$GID" >/dev/null && ok "сообщение в чат видно в админке"

@@ -23,7 +23,12 @@ export function errorText(e: unknown): string {
 }
 
 const mskDay = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Europe/Moscow' })
-const mskTime = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' })
+/** Время по Москве: «08:25». */
+export const mskTime = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' })
+
+/** День по Москве для подписей в переписке: «30 сентября». */
+export const mskDayLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' })
 
 /** Время по-человечески: «сегодня, 08:25», «вчера, 21:10», «28 сент., 08:25», «3 мар. 2025». */
 export function formatWhen(iso: string | null | undefined): string {

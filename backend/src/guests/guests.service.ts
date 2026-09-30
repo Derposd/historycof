@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 import { DB, Db } from '../db/database.module';
-import { consents, deviceTokens, feedback, guests, refreshTokens } from '../db/schema';
+import { chatMessages, consents, deviceTokens, feedback, guests, refreshTokens } from '../db/schema';
 import { LEGAL_VERSION } from '../legal/documents';
 import { StorageService } from '../storage/storage.service';
 
@@ -134,6 +134,8 @@ export class GuestsService {
         .where(eq(guests.id, guestId));
       // Обращения остаются обезличенными: без телефона и фото
       await tx.update(feedback).set({ contactPhone: null, photoUrl: null }).where(eq(feedback.guestId, guestId));
+      // Переписка в чате удаляется целиком
+      await tx.delete(chatMessages).where(eq(chatMessages.guestId, guestId));
       // Согласия отозваны (строки журнала остаются как подтверждение, пока жива запись)
       await tx
         .update(consents)

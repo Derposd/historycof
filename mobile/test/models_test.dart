@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:history_coffee/core/api/api_exception.dart';
 import 'package:history_coffee/core/auth/guest_profile.dart';
 import 'package:history_coffee/core/utils/launch.dart';
+import 'package:history_coffee/features/chat/chat.dart';
 import 'package:history_coffee/features/feedback/feedback.dart';
 import 'package:history_coffee/features/menu/menu_models.dart';
 
@@ -119,6 +120,30 @@ void main() {
 
     test('согласие на рекламу по умолчанию не дано', () {
       expect(GuestProfile.fromJson({'id': 'g', 'phone': '+79990000001'}).pushNewsEnabled, isFalse);
+    });
+  });
+
+  group('ChatMessage', () {
+    test('сообщение гостя и ответ кофейни', () {
+      final mine = ChatMessage.fromJson({
+        'id': 'm1',
+        'fromStaff': false,
+        'text': 'Есть овсяное молоко?',
+        'createdAt': '2026-09-30T08:25:00.000Z',
+        'readAt': null,
+      });
+      expect(mine.fromStaff, isFalse);
+      expect(mine.readAt, isNull);
+      expect(mine.createdAt.toUtc(), DateTime.utc(2026, 9, 30, 8, 25));
+      final reply = ChatMessage.fromJson({
+        'id': 'm2',
+        'fromStaff': true,
+        'text': 'Да, есть',
+        'createdAt': '2026-09-30T08:26:00.000Z',
+        'readAt': '2026-09-30T08:27:00.000Z',
+      });
+      expect(reply.fromStaff, isTrue);
+      expect(reply.readAt, isNotNull);
     });
   });
 }

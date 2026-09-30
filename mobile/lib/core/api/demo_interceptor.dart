@@ -7,6 +7,7 @@ class DemoInterceptor extends Interceptor {
   static const demoCode = '1234';
 
   final _feedback = <Map<String, dynamic>>[];
+  final _chat = <Map<String, dynamic>>[];
   Map<String, dynamic>? _guest;
 
   @override
@@ -58,6 +59,7 @@ class DemoInterceptor extends Interceptor {
         case ('DELETE', '/me'):
           _guest = null;
           _feedback.clear();
+          _chat.clear();
           status = 204;
         case ('GET', '/news'):
           body = {'items': _news, 'nextBefore': null};
@@ -117,6 +119,39 @@ class DemoInterceptor extends Interceptor {
           if (_guest != null) _feedback.insert(0, entry);
           status = 201;
           body = entry;
+        case ('GET', '/chat'):
+          if (_guest == null) fail(401, 'unauthorized', 'Войдите заново');
+          final now = DateTime.now().toIso8601String();
+          for (final m in _chat) {
+            if (m['fromStaff'] == true) m['readAt'] ??= now;
+          }
+          body = _chat;
+        case ('GET', '/chat/unread'):
+          body = {'count': _chat.where((m) => m['fromStaff'] == true && m['readAt'] == null).length};
+        case ('POST', '/chat'):
+          if (_guest == null) fail(401, 'unauthorized', 'Войдите заново');
+          final text = (Map<String, dynamic>.from(o.data as Map)['text'] as String).trim();
+          final now = DateTime.now();
+          final mine = {
+            'id': 'demo-chat-${_chat.length}',
+            'fromStaff': false,
+            'text': text,
+            'createdAt': now.toIso8601String(),
+            'readAt': now.toIso8601String(),
+          };
+          _chat.add(mine);
+          // В демо «кофейня» отвечает сразу
+          if (_chat.where((m) => m['fromStaff'] == true).isEmpty) {
+            _chat.add({
+              'id': 'demo-chat-${_chat.length}',
+              'fromStaff': true,
+              'text': 'Здравствуйте! Это демо-версия: в рабочем приложении здесь ответит сотрудник кофейни из админки.',
+              'createdAt': now.add(const Duration(seconds: 1)).toIso8601String(),
+              'readAt': null,
+            });
+          }
+          body = mine;
+          status = 201;
         case ('GET', '/feedback/mine'):
           body = _feedback;
         default:

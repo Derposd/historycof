@@ -260,3 +260,32 @@ export type MenuSection = typeof menuSections.$inferSelect;
 export type MenuCategory = typeof menuCategories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
+
+// ─── Чат гостя с кофейней ─────────────────────────────────────────────────────
+
+/**
+ * Переписка гостя с кофейней: у каждого гостя один диалог, отвечают сотрудники из админки.
+ * Гости между собой не переписываются. read_at — когда сообщение прочитала другая сторона.
+ */
+export const chatSender = pgEnum('chat_sender', ['guest', 'staff']);
+
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    guestId: uuid('guest_id')
+      .notNull()
+      .references(() => guests.id, { onDelete: 'cascade' }),
+    sender: chatSender('sender').notNull(),
+    staffId: uuid('staff_id').references(() => staffUsers.id, { onDelete: 'set null' }),
+    text: text('text').notNull(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('chat_messages_guest_created_idx').on(t.guestId, t.createdAt),
+    index('chat_messages_unread_idx').on(t.sender, t.readAt),
+  ],
+);
+
+export type ChatMessage = typeof chatMessages.$inferSelect;

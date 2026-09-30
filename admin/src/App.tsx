@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { Layout } from './components/Layout'
 import { Loading } from './components/ui'
+import { Chat } from './pages/Chat'
 import { Dashboard } from './pages/Dashboard'
 import { Feedback } from './pages/Feedback'
 import { Login } from './pages/Login'
@@ -23,6 +24,8 @@ export default function App() {
         <Route path="menu" element={<Menu />} />
         <Route path="feedback" element={<Feedback />} />
         <Route path="feedback/:id" element={<Feedback />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="chat/:guestId" element={<Chat />} />
         {user.role === 'admin' && <Route path="venue" element={<Venue />} />}
         {user.role === 'admin' && <Route path="staff" element={<Staff />} />}
         <Route path="*" element={<Navigate to="/" replace />} />

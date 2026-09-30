@@ -139,3 +139,24 @@ export interface AnalyticsSummary {
   feedback: { open: number; last30dByType: { type: FeedbackType; n: number }[] }
   signupsByDay: { day: string; n: number }[]
 }
+
+// ─── Чат с гостями ───
+
+export interface ChatMessage {
+  id: string
+  /** true — написала кофейня, false — гость */
+  fromStaff: boolean
+  text: string
+  createdAt: string
+  readAt: string | null
+}
+
+export interface ChatThread {
+  guestId: string
+  guestName: string | null
+  guestPhone: string | null
+  lastText: string
+  lastFromStaff: boolean
+  lastAt: string
+  unread: number
+}

@@ -74,6 +74,17 @@ describe('History Coffee API (e2e)', () => {
     return res.body as { accessToken: string; refreshToken: string; guest: { id: string } };
   }
 
+  /** Прямой запрос к тестовой базе — проверить, что данные действительно записаны или удалены. */
+  const q = async (sql: string, params: unknown[] = []) => {
+    const pg = new Client({ connectionString: DATABASE_URL });
+    await pg.connect();
+    try {
+      return (await pg.query(sql, params)).rows;
+    } finally {
+      await pg.end();
+    }
+  };
+
   describe('health & public', () => {
     it('GET /health', () => http.get('/health').expect(200, { status: 'ok' }));
 
@@ -413,17 +424,49 @@ describe('History Coffee API (e2e)', () => {
     });
   });
 
-  describe('законы РФ', () => {
-    const q = async (sql: string, params: unknown[] = []) => {
-      const pg = new Client({ connectionString: DATABASE_URL });
-      await pg.connect();
-      try {
-        return (await pg.query(sql, params)).rows;
-      } finally {
-        await pg.end();
-      }
-    };
+  describe('чат с кофейней', () => {
+    it('гость пишет, сотрудник видит, отвечает, гость получает ответ', async () => {
+      const g = await loginGuest('9005550201', { acceptPersonalData: true, name: 'Амина' });
+      const guest = { Authorization: `Bearer ${g.accessToken}` };
+      const staff = { Authorization: `Bearer ${staffToken}` };
 
+      await http.get('/api/v1/chat').expect(401);
+      await http.post('/api/v1/chat').set(guest).send({ text: '' }).expect(400);
+      await http.post('/api/v1/chat').set(guest).send({ text: '  Здравствуйте! Есть овсяное молоко?  ' }).expect(201);
+
+      const before = await http.get('/api/v1/admin/chats/unread').set(staff).expect(200);
+      expect(before.body.count).toBeGreaterThanOrEqual(1);
+      const threads = await http.get('/api/v1/admin/chats').set(staff).expect(200);
+      const t = threads.body.find((x: { guestId: string }) => x.guestId === g.guest.id);
+      expect(t).toMatchObject({ guestName: 'Амина', guestPhone: '+79005550201', lastText: 'Здравствуйте! Есть овсяное молоко?', unread: 1 });
+
+      const opened = await http.get(`/api/v1/admin/chats/${g.guest.id}`).set(staff).expect(200);
+      expect(opened.body.messages).toHaveLength(1);
+      const after = await http.get('/api/v1/admin/chats').set(staff).expect(200);
+      expect(after.body.find((x: { guestId: string }) => x.guestId === g.guest.id).unread).toBe(0);
+
+      await http.post(`/api/v1/admin/chats/${g.guest.id}`).set(staff).send({ text: 'Да, есть 🙂' }).expect(201);
+      expect((await http.get('/api/v1/chat/unread').set(guest).expect(200)).body.count).toBe(1);
+      const mine = await http.get('/api/v1/chat').set(guest).expect(200);
+      expect(mine.body.map((m: { fromStaff: boolean; text: string }) => [m.fromStaff, m.text])).toEqual([
+        [false, 'Здравствуйте! Есть овсяное молоко?'],
+        [true, 'Да, есть 🙂'],
+      ]);
+      expect((await http.get('/api/v1/chat/unread').set(guest).expect(200)).body.count).toBe(0);
+      // гости не видят чужие диалоги и не пишут в админку
+      await http.get('/api/v1/admin/chats').set(guest).expect(401);
+    });
+
+    it('удаление аккаунта удаляет переписку', async () => {
+      const g = await loginGuest('9005550202', { acceptPersonalData: true });
+      await http.post('/api/v1/chat').set('Authorization', `Bearer ${g.accessToken}`).send({ text: 'Привет' }).expect(201);
+      await http.delete('/api/v1/me').set('Authorization', `Bearer ${g.accessToken}`).expect(204);
+      expect(await q('select 1 from chat_messages where guest_id = $1', [g.guest.id])).toHaveLength(0);
+      await http.post(`/api/v1/admin/chats/${g.guest.id}`).set('Authorization', `Bearer ${staffToken}`).send({ text: 'Ответ' }).expect(404);
+    });
+  });
+
+  describe('законы РФ', () => {
     it('вход только по российскому мобильному номеру (149-ФЗ, 406-ФЗ)', async () => {
       // Казахстан тоже +7, но 7xx — не пускаем; городской 495 — тоже нет
       for (const phone of ['+77011234567', '+74951234567']) {

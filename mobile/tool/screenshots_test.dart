@@ -143,4 +143,22 @@ void main() {
     ),
   );
   testWidgets('consent-doc', (t) => shoot(t, '10-consent', (r) async => r.go('/legal/consent')));
+  testWidgets(
+    'chat',
+    (t) => shoot(
+      t,
+      '12-chat',
+      (r) async => r.go('/contacts'),
+      then: (t, r) async {
+        await signIn(t, r);
+        unawaited(r.push('/chat'));
+        for (var i = 0; i < 8; i++) {
+          await t.pump(const Duration(milliseconds: 100));
+        }
+        await t.enterText(find.byType(TextField).last, 'Здравствуйте! Можно забронировать столик на 19:00?');
+        await t.pump();
+        await t.tap(find.byTooltip('Отправить'));
+      },
+    ),
+  );
 }

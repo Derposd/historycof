@@ -30,7 +30,14 @@ export function Layout() {
     refetchInterval: 60_000,
   })
   const open = summary.data?.feedback.open ?? 0
-  const hasOpen = open > 0
+  // Непрочитанные сообщения чата — чаще, гость ждёт ответа
+  const chatUnread = useQuery({
+    queryKey: ['chat-unread'],
+    queryFn: () => api<{ count: number }>('/admin/chats/unread'),
+    refetchInterval: 15_000,
+  })
+  const unread = chatUnread.data?.count ?? 0
+  const hasOpen = open > 0 || unread > 0
 
   // Одна подсветка, которая переезжает к активному пункту меню.
   const navRef = useRef<HTMLElement>(null)
@@ -59,7 +66,7 @@ export function Layout() {
           onClick={() => setNavOpen(!navOpen)}
         >
           <span className="burger-lines" aria-hidden="true" />
-          {open > 0 && !navOpen && <span className="burger-dot" aria-hidden="true" />}
+          {hasOpen && !navOpen && <span className="burger-dot" aria-hidden="true" />}
         </button>
       </header>
       <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
@@ -81,6 +88,9 @@ export function Layout() {
         <NavLink to="/feedback" className="nav-link">
           Обращения {open > 0 && <span className="pill terracotta">{open}</span>}
         </NavLink>
+        <NavLink to="/chat" className="nav-link">
+          Чат {unread > 0 && <span className="pill terracotta">{unread}</span>}
+        </NavLink>
         {user?.role === 'admin' && (
           <>
             <NavLink to="/venue" className="nav-link">
@@ -101,7 +111,7 @@ export function Layout() {
       </aside>
       <main className="content">
         {/* Ключ по разделу: при переходе страница заново «проявляется»,
-            а открытие карточки обращения (/feedback/:id) страницу не перезапускает */}
+            а открытие карточки обращения (/feedback/:id) или диалога (/chat/:id) страницу не перезапускает */}
         <div key={section} className="page">
           <Outlet />
         </div>

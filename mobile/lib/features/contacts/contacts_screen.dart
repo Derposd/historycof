@@ -11,6 +11,7 @@ import '../../core/utils/launch.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass.dart';
 import '../../core/widgets/motion.dart';
+import '../chat/chat.dart';
 import 'contacts_providers.dart';
 import 'venue.dart';
 
@@ -62,32 +63,27 @@ class ContactsScreen extends ConsumerWidget {
             padding: h,
             child: FadeSlideIn(
               index: 1,
-              // Связь — только телефон. Мессенджеров и соцсетей нет: Instagram — Meta признана в РФ
-              // экстремистской (наказывают и за ссылки), WhatsApp заблокирован, Telegram ограничен.
-              child: Semantics(
-                button: true,
-                label: 'Позвонить, ${formatPhone(venue.phone)}',
-                excludeSemantics: true,
-                child: SoftCard(
-                  onTap: () => openExternal(Links.call(venue.phone)),
-                  child: Row(
-                    children: [
-                      const IconTile(Icons.call_outlined),
-                      const SizedBox(width: HcSpace.m),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Позвонить', style: HcType.serif(size: 21, weight: 600)),
-                            const SizedBox(height: 2),
-                            Text(formatPhone(venue.phone), style: HcType.sans(size: 13, color: HcColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right_rounded, color: HcColors.textSecondary),
-                    ],
+              // Связь: звонок и чат с кофейней (сообщения приходят в админку). Сторонних мессенджеров
+              // и соцсетей нет: Instagram — Meta признана в РФ экстремистской, WhatsApp заблокирован.
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.call_outlined,
+                      label: 'Позвонить',
+                      onTap: () => openExternal(Links.call(venue.phone)),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: HcSpace.listGap),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Чат',
+                      badge: (ref.watch(chatUnreadProvider).value ?? 0) > 0,
+                      onTap: () => context.push('/chat'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -107,6 +103,16 @@ class ContactsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: HcSpace.section),
+          const Padding(padding: h, child: SectionLabel('Телефон')),
+          const SizedBox(height: HcSpace.xs),
+          Padding(
+            padding: h,
+            child: Pressable(
+              onTap: () => openExternal(Links.call(venue.phone)),
+              child: Text(formatPhone(venue.phone), style: HcType.serif(size: 26, weight: 600)),
             ),
           ),
           const SizedBox(height: HcSpace.section),
@@ -229,6 +235,56 @@ class _OpenIndicatorState extends State<_OpenIndicator> with SingleTickerProvide
                 style: HcType.sans(size: 13, weight: 600, color: open ? HcColors.accentDark : HcColors.terracotta),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({required this.icon, required this.label, required this.onTap, this.badge = false});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  /// Точка «есть непрочитанное».
+  final bool badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: badge ? '$label, есть новые сообщения' : label,
+      excludeSemantics: true,
+      child: SoftCard(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(vertical: HcSpace.l),
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconTile(icon, size: 42),
+                if (badge)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: HcColors.terracotta,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: HcSpace.s),
+            Text(label, style: HcType.sans(size: 13, weight: 500)),
           ],
         ),
       ),
