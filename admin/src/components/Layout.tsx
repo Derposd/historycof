@@ -5,6 +5,7 @@ import { api } from '../api'
 import { useAuth } from '../auth-context'
 import type { AnalyticsSummary } from '../types'
 import { Logo } from './Monogram'
+import { AskHost } from './Ask'
 import { Toaster } from './ui'
 
 export function Layout() {
@@ -106,6 +107,7 @@ export function Layout() {
         </div>
       </main>
       <Toaster />
+      <AskHost />
     </div>
   )
 }

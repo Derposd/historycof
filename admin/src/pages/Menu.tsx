@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { api, uploadImage } from '../api'
-import { ErrorBox, ImageField, Loading, Modal, Tabs } from '../components/ui'
+import { confirmDanger } from '../ask'
+import { BusyButton, ErrorBox, ImageField, Loading, Modal, Tabs } from '../components/ui'
 import { errorText } from '../format'
 import { BADGE_LABELS, type MenuBadge, type MenuCategory, type MenuItem, type MenuPrice, type MenuSection } from '../types'
-import { toast } from '../motion'
+import { toast, usePageTitle } from '../motion'
 
 export function Menu() {
+  usePageTitle('Меню')
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['menu'], queryFn: () => api<MenuSection[]>('/admin/menu') })
   const [sectionId, setSectionId] = useState<string | null>(null)
@@ -222,7 +224,11 @@ function CategoryEditor({
   }
 
   async function remove() {
-    if (!category || !confirm(`Удалить категорию «${category.title}» вместе со всеми позициями?`)) return
+    if (
+      !category ||
+      !(await confirmDanger('Удалить категорию?', `«${category.title}» удалится вместе со всеми позициями. Это нельзя отменить.`))
+    )
+      return
     try {
       await api(`/admin/menu/categories/${category.id}`, { method: 'DELETE' })
       toast('Категория удалена')
@@ -233,7 +239,11 @@ function CategoryEditor({
   }
 
   return (
-    <Modal title={category ? 'Категория' : 'Новая категория'} onClose={onClose}>
+    <Modal
+      title={category ? 'Категория' : 'Новая категория'}
+      onClose={onClose}
+      dirty={title !== (category?.title ?? '') || visible !== (category?.visible ?? true)}
+    >
       <form className="stack" onSubmit={submit}>
         <label className="field">
           <span className="caps">Название</span>
@@ -251,7 +261,7 @@ function CategoryEditor({
             </button>
           )}
           <span className="spacer" />
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="ghost" data-close>
             Отмена
           </button>
           <button type="submit">Сохранить</button>
@@ -289,6 +299,9 @@ function ItemEditor({
   const [busy, setBusy] = useState(false)
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
+  // Есть ли несохранённые правки — сравниваем с тем, с чего открыли окно
+  const [initial] = useState(() => JSON.stringify({ form, prices, badges }))
+  const dirty = JSON.stringify({ form, prices, badges }) !== initial
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -319,14 +332,14 @@ function ItemEditor({
   }
 
   async function remove() {
-    if (!item || !confirm(`Удалить «${item.title}»?`)) return
+    if (!item || !(await confirmDanger('Удалить позицию?', `«${item.title}» пропадёт из меню в приложении.`))) return
     await api(`/admin/menu/items/${item.id}`, { method: 'DELETE' })
     toast('Позиция удалена')
     onSaved()
   }
 
   return (
-    <Modal title={item ? 'Позиция меню' : 'Новая позиция'} onClose={onClose}>
+    <Modal title={item ? 'Позиция меню' : 'Новая позиция'} onClose={onClose} dirty={dirty && !busy}>
       <form className="stack" onSubmit={submit}>
         <div className="field">
           <span className="caps">Фото блюда</span>
@@ -435,12 +448,12 @@ function ItemEditor({
             </button>
           )}
           <span className="spacer" />
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="ghost" data-close>
             Отмена
           </button>
-          <button type="submit" disabled={busy}>
+          <BusyButton type="submit" busy={busy}>
             {busy ? 'Сохраняем…' : 'Сохранить'}
-          </button>
+          </BusyButton>
         </div>
       </form>
     </Modal>

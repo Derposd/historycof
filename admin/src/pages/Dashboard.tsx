@@ -1,12 +1,31 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { SignupsChart } from '../components/SignupsChart'
 import { CountUp, ErrorBox, Loading } from '../components/ui'
-import { FEEDBACK_TYPE_LABELS, type AnalyticsSummary } from '../types'
+import { formatWhen } from '../format'
+import { usePageTitle } from '../motion'
+import { FEEDBACK_TYPE_LABELS, type AnalyticsSummary, type Feedback as FeedbackT } from '../types'
+
+/** Приветствие по московскому времени. */
+function greeting() {
+  const h = Number(new Date().toLocaleString('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Europe/Moscow' }))
+  if (h < 5) return 'Доброй ночи'
+  if (h < 12) return 'Доброе утро'
+  if (h < 18) return 'Добрый день'
+  return 'Добрый вечер'
+}
 
 export function Dashboard() {
+  usePageTitle('Обзор')
+  const navigate = useNavigate()
   const q = useQuery({ queryKey: ['analytics'], queryFn: () => api<AnalyticsSummary>('/admin/analytics/summary') })
+  // Обращения, которые ждут ответа, — прямо на обзоре, чтобы разбирать их в один клик
+  const waiting = useQuery({
+    queryKey: ['feedback', 'waiting'],
+    queryFn: () => api<{ items: FeedbackT[]; total: number }>('/admin/feedback?status=sent&page=0&pageSize=4'),
+    refetchInterval: 60_000,
+  })
   if (q.isPending) return <Loading />
   if (q.isError) return <ErrorBox error={q.error} />
   const s = q.data
@@ -15,8 +34,16 @@ export function Dashboard() {
     <div className="stack stagger" style={{ gap: 24 }}>
       <div className="page-head">
         <div>
-          <div className="caps">History Coffee</div>
-          <h1>Обзор</h1>
+          <div className="caps">
+            {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' })}
+          </div>
+          <h1>{greeting()}</h1>
+        </div>
+        <div className="row quick-actions">
+          <button className="ghost" onClick={() => navigate('/menu')}>
+            Меню
+          </button>
+          <button onClick={() => navigate('/news?new=1')}>Новый пост</button>
         </div>
       </div>
 
@@ -33,17 +60,36 @@ export function Dashboard() {
         </div>
         <div className="card stack">
           <div className="row">
-            <div className="caps">Обращения</div>
+            <div className="caps">Ждут ответа</div>
+            {s.feedback.open > 0 && (
+              <span className="pill terracotta">
+                <CountUp value={s.feedback.open} />
+              </span>
+            )}
             <span className="spacer" />
-            <Link to="/feedback">Открыть →</Link>
+            <Link to="/feedback">Все обращения →</Link>
           </div>
-          <div className="stat-value">
-            <CountUp value={s.feedback.open} />
+          {waiting.data && waiting.data.items.length === 0 && (
+            <div className="all-done">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                <path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Новых обращений нет — всё разобрано
+            </div>
+          )}
+          <div className="waiting-list">
+            {waiting.data?.items.map((f) => (
+              <button key={f.id} type="button" className="waiting-item" onClick={() => navigate(`/feedback/${f.id}`)}>
+                <span className={`pill ${f.type === 'complaint' ? 'terracotta' : 'accent'}`}>{FEEDBACK_TYPE_LABELS[f.type]}</span>
+                <span className="waiting-text">{f.message}</span>
+                <span className="muted small waiting-when">{formatWhen(f.createdAt)}</span>
+              </button>
+            ))}
           </div>
-          <div className="muted small">ждут ответа</div>
           <hr style={{ margin: '4px 0' }} />
           <div className="row">
-            {s.feedback.last30dByType.length === 0 && <span className="muted small">За 30 дней обращений не было</span>}
+            <span className="muted small">За 30 дней:</span>
+            {s.feedback.last30dByType.length === 0 && <span className="muted small">обращений не было</span>}
             {s.feedback.last30dByType.map((t) => (
               <span key={t.type} className={`pill ${t.type === 'complaint' ? 'terracotta' : 'accent'}`}>
                 {FEEDBACK_TYPE_LABELS[t.type]}: {t.n}

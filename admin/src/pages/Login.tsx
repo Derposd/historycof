@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth-context'
 import { errorText } from '../format'
 import { Logo } from '../components/Monogram'
+import { usePageTitle } from '../motion'
 
 export function Login() {
+  usePageTitle('Вход')
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

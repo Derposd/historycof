@@ -1,14 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
-import { ErrorBox, Loading } from '../components/ui'
+import { BusyButton, ErrorBox, Loading } from '../components/ui'
 import { errorText } from '../format'
 import type { DayHours, Venue as VenueT } from '../types'
-import { toast } from '../motion'
+import { toast, usePageTitle } from '../motion'
 
 const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
 
 export function Venue() {
+  usePageTitle('Контакты и часы')
   const q = useQuery({ queryKey: ['venue'], queryFn: () => api<VenueT>('/admin/venue') })
   if (q.isError) return <ErrorBox error={q.error} />
   if (q.isPending) return <Loading />
@@ -18,7 +19,18 @@ export function Venue() {
 function VenueForm({ initial }: { initial: VenueT }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<VenueT>(initial)
+  const [saved, setSaved] = useState<VenueT>(initial)
+  const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved)
+
+  // Закрытие вкладки с несохранёнными изменениями — браузер переспросит
+  useEffect(() => {
+    if (!dirty) return
+    const onUnload = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', onUnload)
+    return () => window.removeEventListener('beforeunload', onUnload)
+  }, [dirty])
 
   const set = <K extends keyof VenueT>(k: K, v: VenueT[K]) => setForm({ ...form, [k]: v })
   const setDay = (day: number, patch: Partial<DayHours>) =>
@@ -30,14 +42,18 @@ function VenueForm({ initial }: { initial: VenueT }) {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setMsg(null)
+    setBusy(true)
     try {
-      const saved = await api<VenueT>('/admin/venue', { method: 'PUT', json: form })
-      setForm(saved)
+      const result = await api<VenueT>('/admin/venue', { method: 'PUT', json: form })
+      setForm(result)
+      setSaved(result)
       void qc.invalidateQueries({ queryKey: ['venue'] })
       setMsg(null)
       toast('Сохранено — в приложении обновится при следующем открытии экрана')
     } catch (err) {
       setMsg({ ok: false, text: errorText(err) })
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -48,7 +64,12 @@ function VenueForm({ initial }: { initial: VenueT }) {
           <div className="caps">Раздел «Контакты» в приложении</div>
           <h1>Контакты и часы</h1>
         </div>
-        <button type="submit">Сохранить</button>
+        <div className="row desktop-only">
+          {dirty && <span className="pill gold">Есть несохранённые изменения</span>}
+          <BusyButton type="submit" busy={busy} disabled={!dirty}>
+            {dirty ? 'Сохранить' : 'Сохранено'}
+          </BusyButton>
+        </div>
       </div>
       {msg && (
         <div className={`desktop-only ${msg.ok ? 'card' : 'card error'}`} style={{ marginBottom: 16 }}>
@@ -151,7 +172,9 @@ function VenueForm({ initial }: { initial: VenueT }) {
       </div>
       <div className="save-bar">
         {msg && <div className={`save-msg ${msg.ok ? 'small' : 'error'}`}>{msg.text}</div>}
-        <button type="submit">Сохранить</button>
+        <BusyButton type="submit" busy={busy} disabled={!dirty}>
+          {dirty ? 'Сохранить изменения' : 'Всё сохранено'}
+        </BusyButton>
       </div>
     </form>
   )

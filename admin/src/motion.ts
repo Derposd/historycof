@@ -78,31 +78,9 @@ export function useToasts() {
   )
 }
 
-// ── Свет под курсором на карточках ──
-
-/**
- * Карточки подсвечиваются мягким пятном там, где курсор. Один обработчик на весь
- * документ: пишет координаты в CSS-переменные карточки под курсором.
- * Только для мыши/трекпада — на телефоне эффекта нет.
- */
-export function installSpotlight() {
-  if (typeof window === 'undefined' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
-  let raf = 0
-  let last: PointerEvent | null = null
-  window.addEventListener(
-    'pointermove',
-    (e) => {
-      last = e
-      if (raf) return
-      raf = requestAnimationFrame(() => {
-        raf = 0
-        const card = (last?.target as Element | null)?.closest?.('.card') as HTMLElement | null
-        if (!card || !last) return
-        const r = card.getBoundingClientRect()
-        card.style.setProperty('--mx', `${last.clientX - r.left}px`)
-        card.style.setProperty('--my', `${last.clientY - r.top}px`)
-      })
-    },
-    { passive: true },
-  )
+/** Заголовок вкладки браузера: «Обращения · History Coffee». */
+export function usePageTitle(title: string) {
+  useEffect(() => {
+    document.title = `${title} · History Coffee`
+  }, [title])
 }

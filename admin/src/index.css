@@ -489,15 +489,9 @@ button.icon { width: 32px; padding: 0; }
 .nav-link { position: relative; z-index: 1; }
 .nav-link.active { background: transparent; }
 
-/* Карточки: мягкий свет там, где курсор (только мышь/трекпад) */
+/* Карточки */
 .card { position: relative; isolation: isolate; }
 @media (hover: hover) and (pointer: fine) {
-  .card::before {
-    content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-    background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.7), transparent 60%);
-    opacity: 0; transition: opacity 0.4s var(--ease);
-  }
-  .card:hover::before { opacity: 1; }
   tr.clickable:hover td { background: rgba(255, 255, 255, 0.65); }
 }
 
@@ -606,4 +600,126 @@ input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 4px rgba(138, 151,
   .nav-open .sidebar .nav-link:nth-of-type(5) { animation-delay: 160ms; }
   .nav-open .sidebar .nav-link:nth-of-type(6) { animation-delay: 200ms; }
   .nav-open .sidebar .sidebar-footer { animation: nav-in 0.45s 0.24s var(--ease) backwards; }
+}
+
+/* ══════════ Удобство ══════════ */
+
+/* Фокус с клавиатуры виден всегда, мышью — не мешает */
+:focus-visible { outline: 2px solid rgba(95, 110, 69, 0.55); outline-offset: 2px; }
+button:focus:not(:focus-visible) { outline: none; }
+
+/* Кнопка «идёт сохранение» */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 14px; height: 14px; flex: none; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+button.is-busy { opacity: 0.8; cursor: progress; }
+button.danger.solid { background: var(--terracotta); color: #fff; border-color: transparent; }
+button.danger.solid:hover { background: #b5674a; }
+
+/* Диалог подтверждения */
+.ask-backdrop {
+  position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px;
+  background: rgba(54, 43, 34, 0.3);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  animation: fade-in 0.2s var(--ease);
+}
+.ask {
+  width: min(440px, 100%); padding: 24px; border-radius: 22px;
+  background: rgba(251, 247, 239, 0.97); border: 1px solid var(--glass-border);
+  box-shadow: 0 30px 60px -20px rgba(54, 43, 34, 0.35);
+  animation: modal-in 0.4s var(--spring) both;
+}
+.ask h3 { font-size: 24px; font-weight: 500; }
+.ask p { margin: 8px 0 0; }
+.ask-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.ask-actions.many { flex-direction: column-reverse; align-items: stretch; }
+.ask-backdrop.closing { animation: fade-out 0.18s var(--ease) both; }
+.ask-backdrop.closing .ask { animation: modal-out 0.18s var(--ease) both; }
+
+/* Широкое окно редактора с предпросмотром */
+.modal.wide { width: min(1040px, 100%); }
+.editor-split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.preview-col { position: sticky; top: 0; display: grid; gap: 10px; justify-items: center; }
+.preview-col .caps { justify-self: start; }
+
+/* Телефон в предпросмотре — копия карточки новости из приложения */
+.phone {
+  width: 280px; padding: 10px; border-radius: 40px; background: #2f2620;
+  box-shadow: 0 30px 50px -24px rgba(54, 43, 34, 0.55);
+}
+.phone-screen {
+  position: relative; height: 520px; overflow: hidden; border-radius: 31px; padding: 16px 14px;
+  background: var(--bg);
+  background-image:
+    radial-gradient(220px 220px at 100% 0%, rgba(227, 197, 127, 0.45), transparent 70%),
+    radial-gradient(240px 240px at 0% 55%, rgba(138, 151, 112, 0.25), transparent 70%);
+}
+.phone-head { display: flex; align-items: center; gap: 8px; margin: 18px 0 14px; font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.phone-card {
+  overflow: hidden; border-radius: 18px; background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 10px 24px -10px rgba(54, 43, 34, 0.15);
+}
+.phone-card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.phone-card-body { padding: 14px; }
+.phone-date { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); font-weight: 500; }
+.phone-date svg { color: var(--accent); }
+.phone-title {
+  margin-top: 6px; font-family: var(--serif); font-size: 20px; font-weight: 600; line-height: 1.12;
+  overflow-wrap: anywhere; font-variant-numeric: lining-nums;
+}
+.phone-text {
+  margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--text-2); white-space: pre-line;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.phone-title.placeholder, .phone-text.placeholder { opacity: 0.45; }
+.phone-push {
+  position: absolute; z-index: 2; top: 10px; left: 8px; right: 8px; display: flex; gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px -10px rgba(54, 43, 34, 0.35);
+  animation: toast-in 0.5s var(--spring) both;
+}
+.phone-push-icon {
+  flex: none; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--accent-dark); color: #fff; font-family: var(--serif); font-size: 17px;
+}
+.phone-push-app { font-size: 10.5px; color: var(--text-2); }
+.phone-push-title { font-size: 12.5px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+
+/* Обращения */
+.unread-dot {
+  display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%;
+  background: var(--terracotta); vertical-align: 2px;
+  box-shadow: 0 0 0 3px rgba(201, 123, 93, 0.18);
+}
+.templates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -4px; }
+button.chip {
+  min-height: 30px; padding: 0 12px; font-size: 13px; font-weight: 500;
+  background: rgba(138, 151, 112, 0.14); color: var(--accent-dark); border: 1px solid transparent;
+}
+button.chip:hover { background: rgba(138, 151, 112, 0.24); }
+.empty-icon { font-size: 28px; line-height: 1; margin-bottom: 10px; color: var(--accent); }
+
+/* Обзор: обращения, ждущие ответа */
+.waiting-list { display: grid; gap: 2px; margin: 0 -8px; }
+button.waiting-item {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 44px; padding: 6px 8px; border-radius: 12px; text-align: left;
+  background: transparent; color: var(--text); font-weight: 400;
+}
+button.waiting-item:hover { background: rgba(255, 255, 255, 0.7); }
+button.waiting-item::after { display: none; }
+.waiting-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.waiting-when { white-space: nowrap; }
+.all-done { display: flex; align-items: center; gap: 10px; color: var(--accent-dark); font-weight: 500; padding: 6px 0; }
+
+@media (max-width: 860px) {
+  .editor-split { grid-template-columns: minmax(0, 1fr); }
+  .preview-col { position: static; }
+  .kbd-hint { display: none; }
+  .quick-actions { flex-wrap: nowrap; }
+  .quick-actions button { flex: 1; }
+  .waiting-when { display: none; }
 }

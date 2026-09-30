@@ -1,15 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
-import { ErrorBox, ImageField, Loading, Modal } from '../components/ui'
+import { ask, confirmDanger } from '../ask'
+import { BusyButton, ErrorBox, ImageField, Loading, Modal } from '../components/ui'
 import { errorText, formatDate } from '../format'
 import type { NewsPost } from '../types'
-import { toast } from '../motion'
+import { toast, usePageTitle } from '../motion'
+import { Monogram } from '../components/Monogram'
 
 export function News() {
+  usePageTitle('Новости')
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['news'], queryFn: () => api<NewsPost[]>('/admin/news') })
-  const [editing, setEditing] = useState<NewsPost | 'new' | null>(null)
+  // /news?new=1 (быстрое действие на обзоре) сразу открывает редактор нового поста
+  const [params, setParams] = useSearchParams()
+  const [editing, setEditing] = useState<NewsPost | 'new' | null>(() => (params.get('new') ? 'new' : null))
+  useEffect(() => {
+    if (params.get('new')) setParams({}, { replace: true })
+  }, [params, setParams])
   const invalidate = () => qc.invalidateQueries({ queryKey: ['news'] })
 
   const publish = useMutation({
@@ -78,9 +87,17 @@ export function News() {
                 <button
                   className="small"
                   disabled={publish.isPending}
-                  onClick={() => {
-                    const notify = !p.pushedAt && confirm('Отправить push-уведомление подписчикам?')
-                    publish.mutate({ id: p.id, notify })
+                  onClick={async () => {
+                    if (p.pushedAt) return publish.mutate({ id: p.id, notify: false })
+                    const notify = await ask({
+                      title: 'Опубликовать пост?',
+                      text: 'Можно сразу отправить гостям push-уведомление — его увидят все, кто подписан на новости.',
+                      actions: [
+                        { label: 'Без уведомления', value: false, kind: 'ghost' },
+                        { label: 'Опубликовать и отправить push', value: true },
+                      ],
+                    })
+                    if (notify !== null) publish.mutate({ id: p.id, notify })
                   }}
                 >
                   Опубликовать
@@ -92,7 +109,10 @@ export function News() {
               )}
               <button
                 className="danger small"
-                onClick={() => confirm(`Удалить «${p.title}»?`) && remove.mutate(p.id)}
+                onClick={async () =>
+                  (await confirmDanger(`Удалить пост?`, `«${p.title}» пропадёт из ленты приложения. Это нельзя отменить.`)) &&
+                  remove.mutate(p.id)
+                }
               >
                 Удалить
               </button>
@@ -124,6 +144,11 @@ function NewsEditor({ post, onClose, onSaved }: { post: NewsPost | null; onClose
   const [notify, setNotify] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const dirty =
+    title !== (post?.title ?? '') ||
+    body !== (post?.body ?? '') ||
+    imageUrl !== (post?.imageUrl ?? null) ||
+    pinned !== (post?.pinned ?? false)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -145,7 +170,8 @@ function NewsEditor({ post, onClose, onSaved }: { post: NewsPost | null; onClose
   }
 
   return (
-    <Modal title={post ? 'Редактировать пост' : 'Новый пост'} onClose={onClose}>
+    <Modal title={post ? 'Редактировать пост' : 'Новый пост'} onClose={onClose} dirty={dirty && !busy} wide>
+      <div className="editor-split">
       <form className="stack" onSubmit={submit}>
         <label className="field">
           <span className="caps">Заголовок</span>
@@ -180,14 +206,85 @@ function NewsEditor({ post, onClose, onSaved }: { post: NewsPost | null; onClose
         {error && <div className="error">{error}</div>}
         <div className="row">
           <span className="spacer" />
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="ghost" data-close>
             Отмена
           </button>
-          <button type="submit" disabled={busy}>
+          <BusyButton type="submit" busy={busy}>
             {busy ? 'Сохраняем…' : 'Сохранить'}
-          </button>
+          </BusyButton>
         </div>
       </form>
+      <aside className="preview-col" aria-label="Предпросмотр">
+        <div className="caps">Так пост увидят гости</div>
+        <NewsPreview
+          title={title}
+          body={body}
+          imageUrl={imageUrl}
+          pinned={pinned}
+          push={!post && publishNow && notify}
+          date={post?.publishedAt ?? null}
+        />
+      </aside>
+      </div>
     </Modal>
+  )
+}
+
+/**
+ * Предпросмотр поста так, как он выглядит в ленте приложения: телефон, стеклянная
+ * карточка с фото, датой, заголовком и тремя строками текста. Если включён push —
+ * сверху показывается уведомление.
+ */
+function NewsPreview({
+  title,
+  body,
+  imageUrl,
+  pinned,
+  push,
+  date,
+}: {
+  title: string
+  body: string
+  imageUrl: string | null
+  pinned: boolean
+  push: boolean
+  date: string | null
+}) {
+  const when = date
+    ? new Date(date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' })
+    : 'Сегодня'
+  return (
+    <div className="phone">
+      <div className="phone-screen">
+        {push && (
+          <div className="phone-push">
+            <span className="phone-push-icon">H</span>
+            <div>
+              <div className="phone-push-app">History Coffee · сейчас</div>
+              <div className="phone-push-title">{title || 'Заголовок поста'}</div>
+            </div>
+          </div>
+        )}
+        <div className="phone-head">
+          <Monogram size={26} />
+          <span>History</span>
+        </div>
+        <div className="phone-card">
+          {imageUrl && <img src={imageUrl} alt="" />}
+          <div className="phone-card-body">
+            <div className="phone-date">
+              {when}
+              {pinned && (
+                <svg viewBox="0 0 24 24" width="12" height="12" aria-label="закреплено">
+                  <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5zM12 14v6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <div className={`phone-title${title ? '' : ' placeholder'}`}>{title || 'Заголовок поста'}</div>
+            <div className={`phone-text${body ? '' : ' placeholder'}`}>{body || 'Текст поста появится здесь — в ленте видны первые три строки.'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

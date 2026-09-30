@@ -1,19 +1,44 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { uploadImage } from '../api'
 import { errorText } from '../format'
 import { dismiss, reducedMotion, useCountUp, useToasts } from '../motion'
+import { ask } from '../ask'
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  // Закрытие по ✕, фону или Esc сначала доигрывает анимацию ухода.
+/**
+ * Окно редактирования. Закрывается по ✕, фону, Esc и кнопкам с атрибутом data-close
+ * (например, «Отмена»); если [dirty] — сначала спрашивает, не потерять ли изменения.
+ */
+export function Modal({
+  title,
+  onClose,
+  children,
+  dirty = false,
+  wide = false,
+}: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+  dirty?: boolean
+  wide?: boolean
+}) {
   const [closing, setClosing] = useState(false)
-  const close = useCallback(() => {
+  const close = useCallback(async () => {
+    if (
+      dirty &&
+      !(await ask({
+        title: 'Закрыть без сохранения?',
+        text: 'Изменения в этом окне пропадут.',
+        actions: [{ label: 'Закрыть', value: true, kind: 'danger' }],
+      }))
+    )
+      return
     if (reducedMotion()) return onClose()
     setClosing(true)
     setTimeout(onClose, 220)
-  }, [onClose])
+  }, [onClose, dirty])
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && void close()
     document.addEventListener('keydown', onKey)
     // Страница под окном не прокручивается
     const overflow = document.body.style.overflow
@@ -25,18 +50,40 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [close])
 
   return (
-    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && void close()}>
+      <div
+        className={`modal${wide ? ' wide' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => (e.target as HTMLElement).closest('[data-close]') && void close()}
+      >
         <div className="row" style={{ marginBottom: 20 }}>
           <h2>{title}</h2>
           <span className="spacer" />
-          <button className="ghost small icon-close" onClick={close} aria-label="Закрыть">
+          {dirty && <span className="pill gold">Есть изменения</span>}
+          <button type="button" className="ghost small icon-close" data-close aria-label="Закрыть">
             ✕
           </button>
         </div>
         {children}
       </div>
     </div>
+  )
+}
+
+/** Кнопка с состоянием «идёт сохранение»: крутилка и заблокирована. */
+export function BusyButton({
+  busy,
+  children,
+  className,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }) {
+  return (
+    <button {...rest} className={`${className ?? ''}${busy ? ' is-busy' : ''}`} disabled={busy || rest.disabled} aria-busy={busy}>
+      {busy && <span className="spinner" aria-hidden="true" />}
+      {children}
+    </button>
   )
 }
 

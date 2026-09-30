@@ -5,7 +5,7 @@ import { useAuth } from '../auth-context'
 import { ErrorBox, Loading, Modal } from '../components/ui'
 import { errorText, formatDate } from '../format'
 import type { StaffRole, StaffUser } from '../types'
-import { toast } from '../motion'
+import { toast, usePageTitle } from '../motion'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   admin: 'Администратор',
@@ -13,6 +13,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
 }
 
 export function Staff() {
+  usePageTitle('Сотрудники')
   const { user } = useAuth()
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['staff'], queryFn: () => api<StaffUser[]>('/admin/staff') })
@@ -113,7 +114,7 @@ function CreateStaff({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
   }
 
   return (
-    <Modal title="Новый сотрудник" onClose={onClose}>
+    <Modal title="Новый сотрудник" onClose={onClose} dirty={Boolean(name || email || password)}>
       <form className="stack" onSubmit={submit}>
         <label className="field">
           <span className="caps">Имя</span>
@@ -137,7 +138,7 @@ function CreateStaff({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
         {error && <div className="error">{error}</div>}
         <div className="row">
           <span className="spacer" />
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="ghost" data-close>
             Отмена
           </button>
           <button type="submit">Создать</button>
