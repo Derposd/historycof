@@ -146,6 +146,8 @@ class ProfileScreen extends ConsumerWidget {
             child: Text(
               [
                 'Продавец: ${venue.legalName}',
+                if (venue.inn.isNotEmpty) 'ИНН ${venue.inn}',
+                if (venue.ogrn.isNotEmpty) '${venue.ogrn.length == 15 ? 'ОГРНИП' : 'ОГРН'} ${venue.ogrn}',
                 'Кофейня: ${venue.address}',
                 '0+',
               ].join('\n'),

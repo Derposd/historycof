@@ -531,9 +531,9 @@ describe('History Coffee API (e2e)', () => {
         .expect(400);
     });
 
-    it('в документах — наименование и адрес оператора, без заглушек', async () => {
+    it('в документах — наименование, адрес и (если заполнены) ИНН/ОГРН, без заглушек', async () => {
       const auth = { Authorization: `Bearer ${staffToken}` };
-      await http.put('/api/v1/admin/venue').set(auth).send({ legalAddress: '', privacyEmail: '' }).expect(200);
+      await http.put('/api/v1/admin/venue').set(auth).send({ legalAddress: '', privacyEmail: '', inn: '', ogrn: '' }).expect(200);
       let res = await http.get('/api/v1/legal/consent').expect(200);
       expect(res.body.markdown).toContain('ИП Жабоева А. Т., адрес: г. Нальчик, ул. Толстого, 43');
       expect(res.body.markdown).not.toMatch(/\[[^\]]+\]/); // нет «[ИНН]» и подобных пустых мест
@@ -542,13 +542,21 @@ describe('History Coffee API (e2e)', () => {
       await http
         .put('/api/v1/admin/venue')
         .set(auth)
-        .send({ legalAddress: 'г. Нальчик, ул. Примерная, 1', privacyEmail: 'pd@historycoffee.ru' })
+        .send({
+          legalAddress: 'г. Нальчик, ул. Примерная, 1',
+          privacyEmail: 'pd@historycoffee.ru',
+          inn: '071234567890',
+          ogrn: '312072100012345',
+        })
         .expect(200);
       res = await http.get('/api/v1/legal/privacy').expect(200);
       expect(res.body.markdown).toContain('г. Нальчик, ул. Примерная, 1');
       expect(res.body.markdown).toContain('pd@historycoffee.ru');
-      // ИНН/ОГРН больше не принимаются
-      await http.put('/api/v1/admin/venue').set(auth).send({ inn: '071234567890' }).expect(400);
+      expect(res.body.markdown).toContain('ИП Жабоева А. Т. (ИНН 071234567890, ОГРНИП 312072100012345)');
+      expect((await http.get('/api/v1/venue').expect(200)).body).toMatchObject({ inn: '071234567890', ogrn: '312072100012345' });
+      await http.put('/api/v1/admin/venue').set(auth).send({ inn: '123' }).expect(400);
+      await http.put('/api/v1/admin/venue').set(auth).send({ ogrn: '12345' }).expect(400);
+      await http.put('/api/v1/admin/venue').set(auth).send({ inn: '', ogrn: '' }).expect(200);
     });
 
     it('удаление аккаунта убирает телефон из его обращений', async () => {

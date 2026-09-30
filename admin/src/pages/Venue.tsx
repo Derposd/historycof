@@ -174,6 +174,14 @@ function VenueForm({ initial }: { initial: VenueT }) {
             <span className="caps">Адрес продавца</span>
             <input value={form.legalAddress} onChange={(e) => set('legalAddress', e.target.value)} required />
           </label>
+          <label className="field">
+            <span className="caps">ИНН</span>
+            <input value={form.inn} onChange={(e) => set('inn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={12} placeholder="10 или 12 цифр" />
+          </label>
+          <label className="field">
+            <span className="caps">ОГРН / ОГРНИП</span>
+            <input value={form.ogrn} onChange={(e) => set('ogrn', e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={15} placeholder="13 или 15 цифр" />
+          </label>
         </div>
         <label className="field">
           <span className="caps">Почта для запросов гостей о данных (необязательно)</span>

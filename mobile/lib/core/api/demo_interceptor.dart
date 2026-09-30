@@ -260,6 +260,8 @@ final _venue = <String, dynamic>{
   'phone': '+79604316223',
   'website': 'https://historycoffee.ru/',
   'legalName': 'ИП Жабоева А. Т.',
+  'inn': '',
+  'ogrn': '',
   'hours': [
     for (var d = 1; d <= 7; d++) {'day': d, 'open': d <= 5 ? '08:00' : '09:00', 'close': '23:00'},
   ],

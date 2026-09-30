@@ -44,6 +44,8 @@ class UpdateVenueDto {
   @IsOptional() @Matches(/^\+7\d{10}$/, { message: 'Телефон в формате +7XXXXXXXXXX' }) phone?: string;
   @IsOptional() @IsString() @MaxLength(200) website?: string;
   @IsOptional() @IsString() @Length(1, 200, { message: 'Укажите наименование продавца (ИП или организация)' }) legalName?: string;
+  @IsOptional() @Matches(/^(\d{10}|\d{12})?$/, { message: 'ИНН — 10 или 12 цифр' }) inn?: string;
+  @IsOptional() @Matches(/^(\d{13}|\d{15})?$/, { message: 'ОГРН — 13 цифр, ОГРНИП — 15' }) ogrn?: string;
   @IsOptional() @IsString() @MaxLength(300) legalAddress?: string;
   @IsOptional() @ValidateIf((o: UpdateVenueDto) => !!o.privacyEmail) @IsEmail({}, { message: 'Почта указана неверно' }) privacyEmail?: string;
 

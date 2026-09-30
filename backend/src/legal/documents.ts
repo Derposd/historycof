@@ -24,16 +24,24 @@ export const LEGAL_TITLES: Record<LegalDocKind, string> = {
 
 const orDash = (v: string | undefined | null, hint: string) => (v && v.trim() ? v.trim() : `[${hint}]`);
 
+/** «ИНН …, ОГРНИП …» — только заполненные реквизиты. */
+export function registrationLine(v: Pick<VenueInfo, 'inn' | 'ogrn'>): string {
+  const inn = v.inn?.trim();
+  const ogrn = v.ogrn?.trim();
+  return [inn && `ИНН ${inn}`, ogrn && `${ogrn.length === 15 ? 'ОГРНИП' : 'ОГРН'} ${ogrn}`].filter(Boolean).join(', ');
+}
+
 /**
- * Оператор ПДн. По ч. 4 ст. 9 152-ФЗ в согласии обязательны наименование и адрес оператора —
- * только их и требуем; адрес по умолчанию — адрес кофейни. Почта для запросов — необязательна.
+ * Оператор ПДн. По ч. 4 ст. 9 152-ФЗ в согласии обязательны наименование и адрес оператора;
+ * адрес по умолчанию — адрес кофейни. ИНН/ОГРН и почта — если заполнены, без пустых мест.
  */
 function operator(v: VenueInfo) {
   const name = orDash(v.legalName, 'наименование оператора');
   const address = v.legalAddress?.trim() || v.address;
   const email = v.privacyEmail?.trim();
+  const reg = registrationLine(v);
   return {
-    full: `${name}, адрес: ${address}`,
+    full: `${name}${reg ? ` (${reg})` : ''}, адрес: ${address}`,
     contact: email ? `электронная почта ${email}, телефон ${v.phone}` : `телефон ${v.phone}, почтовый адрес: ${address}`,
     requestTo: email ? `на электронную почту ${email}` : `по почтовому адресу оператора: ${address}`,
   };

@@ -21,6 +21,8 @@ class Venue {
     required this.address,
     required this.phone,
     required this.legalName,
+    this.inn = '',
+    this.ogrn = '',
     required this.hours,
     this.website,
     this.lat,
@@ -40,6 +42,10 @@ class Venue {
   /// Сведения о продавце (ЗоЗПП, ст. 9).
   final String legalName;
 
+  /// ИНН и ОГРН/ОГРНИП продавца — показываются внизу профиля, если заполнены в админке.
+  final String inn;
+  final String ogrn;
+
   factory Venue.fromJson(Map<String, dynamic> j) => Venue(
     name: j['name'] as String,
     tagline: j['tagline'] as String? ?? '',
@@ -49,6 +55,8 @@ class Venue {
     phone: j['phone'] as String,
     website: j['website'] as String?,
     legalName: j['legalName'] as String? ?? '',
+    inn: j['inn'] as String? ?? '',
+    ogrn: j['ogrn'] as String? ?? '',
     hours: (j['hours'] as List<dynamic>).map((e) => DayHours.fromJson(e as Map<String, dynamic>)).toList(),
   );
 

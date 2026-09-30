@@ -18,6 +18,10 @@ export interface VenueInfo {
   // ── Сведения о продавце (ЗоЗПП ст. 9) и об операторе ПДн (152-ФЗ) ──
   /** Наименование оператора (ИП или организация) — обязательно для согласия (ч. 4 ст. 9 152-ФЗ). */
   legalName: string;
+  /** ИНН продавца (10 или 12 цифр) — показывается, если заполнен. */
+  inn: string;
+  /** ОГРН (13 цифр) или ОГРНИП (15 цифр) — показывается, если заполнен. */
+  ogrn: string;
   /** Адрес оператора; пусто — используется адрес кофейни. */
   legalAddress: string;
   /** Почта для запросов по персональным данным (необязательно). */
@@ -25,7 +29,7 @@ export interface VenueInfo {
 }
 
 /** Поля, которые раньше были в настройках и больше не используются. */
-const REMOVED_FIELDS = ['instagram', 'whatsapp', 'telegram', 'vk', 'inn', 'ogrn', 'processors', 'loyaltyRules'];
+const REMOVED_FIELDS = ['instagram', 'whatsapp', 'telegram', 'vk', 'processors', 'loyaltyRules'];
 
 /** Данные из брифа заказчика (сверено с historycoffee.ru). */
 export const DEFAULT_VENUE: VenueInfo = {
@@ -37,6 +41,8 @@ export const DEFAULT_VENUE: VenueInfo = {
   phone: '+79604316223',
   website: 'https://historycoffee.ru/',
   legalName: 'ИП Жабоева А. Т.',
+  inn: '',
+  ogrn: '',
   legalAddress: '',
   privacyEmail: '',
   hours: [
@@ -64,7 +70,6 @@ export class VenueService {
     const stored = { ...((row?.value as Record<string, unknown>) ?? {}) };
     // Мессенджеры и соцсети убраны: Instagram — Meta признана в РФ экстремистской (наказывают даже
     // за ссылки), WhatsApp заблокирован с февраля 2026, Telegram ограничен. Связь — только телефон.
-    // ИНН/ОГРН убраны: для меню и согласия не обязательны (нужны только наименование и адрес).
     for (const k of REMOVED_FIELDS) delete stored[k];
     const venue = { ...DEFAULT_VENUE, ...(stored as Partial<VenueInfo>) };
     // Адрес продавца по умолчанию — адрес кофейни (показываем в админке настоящее значение)
